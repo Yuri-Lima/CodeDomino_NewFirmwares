@@ -444,9 +444,9 @@ void girar(){
   if((grausGirar>50)or(grausGirar<50)){ //acelera e freia o passo
       passo = round(passo*0.90);
       if(passo<6) passo=6;
-    } else {
+  } else {
       passo = passo + 1;
-    }
+  }
   if(grausGirar == 0) caminhando = false;
 }
 
