@@ -37,45 +37,20 @@ Off course you need a Turrai complete robot. See www.codedomino.org and www.geni
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
+To install, simply use this files inside arduino sketch folder. Don't forget to install the libraries, using arduino's IDE menu Sketch -> Install Library -> Manage Library.
 
-Say what the step will be
+## Running the basic test
 
-```
-Give the example
-```
-
-And repeat
-
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
-
-Explain how to run the automated tests for this system
+To run the basic code (hello world), simply upload the code to the robot using USB, and press the button A (seccond from riht to left looking the robot frontal). The Turrai robot will draw a 10 x 10 cm suqare, then will position inside of it.
 
 ### Break down into end to end tests
 
-Explain what these tests test and why
+To program a new code with the RFID dominoes, simply give a long press in any button: The robot start move looking forward the code, and will record it in the selected space memory. To execute, short press the same button. An exemple of code to try is listed above:
 
 ```
-Give an example
+Start - Repeat < 4 - front - left - Stop repeat - Stop
 ```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
+This code will draw a 10 x 10 cm square.
 
 ## Built With
 
