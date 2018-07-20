@@ -6,14 +6,25 @@
  * Funcionamento:
  * O robô inicia parado, aguardando a leitura de uma peça RFID para ou iniciar a execução de um programa ou gravar um programa.
  * O loop dessa chamada está na função loop(), e é feita a cada passar da variável passo. Esta inicia alta (50) mas é diminuida 
- * até o valor 3 gradativamente, para implementar a aceleração e desaceleração do robô (mais precisão no movimento).
+ * até o valor 4 gradativamente, para implementar a aceleração e desaceleração do robô (mais precisão no movimento).
+ * Os botões também podem ser usados para operar: 
+ * [Rec/Stop] Toque curto inicia gravação de programa no endereço A da memória. Com o robô em movimento, este botão vira STOP.
+ * [A] Toque curto executa programa no endereço A. Toque longo grava no endereço A.
+ * [B] Toque curto executa programa no endereço B. Toque longo grava no endereço B.
+ * [C] Toque curto executa programa no endereço C. Toque longo grava no endereço C.
+ * [D] Toque curto executa programa no endereço D. Toque longo grava no endereço D.
+ * [E] Toque curto executa programa no endereço E. Toque longo grava no endereço E.
+ * 
+ * Todos os programas estão gravados na EEPROM, em 128 bytes de espaço. Os 64 primeiros são os comandos, os 64 seguintes são parâmetros.
+ * Ao gravar um novo programa, ele é colocado nos vetores programa[] e parametro[] na memória RAM, e só no final é gravado na EEPROM.
  * 
  * A cada 1 segundo a função loop() chama outras funções acessórias: leRfid() e medeDistancia().
  * 
- * Ao ler um RFID o robô chama as funções executaInstrução() ou gravaInstrução() dependendo da variável executando (marcada 
- * como FALSE ele irá gravar o comando). A função também chama a outra iniciaGravacaoPrograma(), caso a peça seja 1 (inicia gravação). 
+ * Ao ler um RFID o robô chama as funções executaInstrução() ou gravaInstrução() dependendo da variável 'executando' (marcada 
+ * como FALSE ele irá gravar o comando). A função também chama a outra iniciaGravacaoProgramaRAM(), caso a peça seja 1 (inicia gravação). 
  * 
- * A função iniciaGravacaoPrograma() faz o robô andar para frente buscando novas peças para gravar. 
+ * A função iniciaGravacaoProgramaRAM() faz o robô andar para frente buscando novas peças para gravar. Ele anda por um tempo, e se não
+ * encontrar uma peça final, ele para e emite um erro.
  * 
  * A função gravaInstrucao() recebe o ID do comando e o valor do parâmetro. Ela incrementa a variável passosCaminhar afim de que 
  * a cada peça encontrada, o robô ande um pouco mais buscando novas peças (parando quando encontra uma peça fim). 
@@ -27,6 +38,7 @@
  *   passos do motor.
  * - 7 é espere (break). Espera 1 segundo ou o número de segundos dado como parâmetro. 
  * - 8 e 9 são as peças repetir e fim repetir. 
+ * - 10 e 11 controlam a caneta (primeira desce a caneta, segunda sobe).
  * 
  * A função fim() reseta as variáveis, voltando o robô para o estado de repouso inicial. A leitura de RFID a cada segundo continua. 
  * 
@@ -41,14 +53,15 @@
  * desaceleração do passo (porém com passo mínimo 6, para não ir tão rápido). 
  * 
  * A função erro() toca um tom negativo no buzzer e para o robô. 
- * 
- * 1.0 - Versão inicial do Code Domino.
- * 1.1 - Implementado movimento com 4 passos. 
  */
 #include <SPI.h>
 #include <MFRC522.h>
+#include <Ultrasonic.h>
+#include <EEPROM.h>
+#include <Servo.h>
 
 //pinos da shield
+int servo = 19;
 int sck = 13; //SPI
 int miso = 12; //SPI
 int mosi = 11; //SPI
@@ -73,16 +86,23 @@ byte buffer[18];  //data transfer buffer (16+2 bytes data+CRC)
 byte size = sizeof(buffer);
 uint8_t pageAddr = 0x06;
 
+//Ultrassom
+Ultrasonic ultrasonic(5, 4);
+
+//Servo
+Servo myservo;
+
 //Variáveis
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 boolean caminhando = false; //define se o robô está em movimento ou não
 //boolean gravando = false; //define se o robô está gravando comandos ou não.
 boolean executando = false; //define se o robô está executando comandos ou não.
-//char programa[64] = "SFLE"; //vetor dos comandos
-int programa[64] = {3, 8, 4, 5, 9, 5, 4, 6, 2};
-int parametros[64] = {0, 4, 0, 0, 0, 45, 7, 50, 0}; //vetor dos parâmetros
-int ponteirosRepetir[32]; //vetor que armazena os ponteiros de repetição
+int programa[64] = {3, 10, 8, 4, 5, 9, 11, 5, 4, 6, 2};
+int parametros[64] = {0, 0, 4, 0, 0, 0, 0, 45, 7, 45, 0}; //vetor dos parâmetros
+//int programa[64];
+//int parametros[64];
+int ponteirosRepetir[4]; //vetor que armazena os ponteiros de repetição
 int ponteiro = 0; //ponteiro indicando em que passo está do programa
 int passo = 50; //milissegundos entre cada instrução de movimento.
 int setDistanciaBasica = 10; //distancia básica de movimento do robô em linha reta
@@ -90,13 +110,25 @@ int passosCaminhar = 0; //quantidade de passos que o robô deve percorrer até a
 int grausGirar = 0; //quantidade de passos que o robô deve percorrer até a próxima instrução.
 int movimentacaoX = 0; //variáveis que gravam o deslocamento total do robô, para a instrução voltar ao início. 
 int movimentacaoY = 0;
-int passoDir = 1; //vai de 1 a 8
+int passoDir = 1; //vai de 1 a 4
 int passoEsq = 1;
+int valorBotao = 0; //variável de leitura dos botões no Analogic 0 (A0)
+int ultimoEstadoBotoes = LOW; //variável de debounce do botão
+int ultimoValorBotoes = 0;
+long timerBotao = 0;
+long timerLongoPressionar = 1000;
+int enderecoEepromGravacao = 0;
+int distanciaUltrassom = 150; //distância medida pelo ultrassom
 byte binarioDir = B00000000;
 byte binarioEsq = B00000000;
+String tempMsg = ""; //variável temporária de mensagens para serial debug
+int canetaAcima = 65;
+int canetaAbaixo = 100;
 
 void setup() {
   Serial.begin(9600);
+  myservo.attach(servo);
+  myservo.write(canetaAcima);
   pinMode(buzzer, OUTPUT);
   pinMode(led, OUTPUT);
   pinMode(14, INPUT);
@@ -108,7 +140,8 @@ void setup() {
   digitalWrite(latchPin, LOW);
   shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binário para o shift register
   digitalWrite(latchPin, HIGH);
-  inicio();
+  gravaProgramadaEeprom(0);
+  somInicio();
 }
 
 void loop() {
@@ -121,7 +154,6 @@ void loop() {
     } else {
       if(executando){
         ponteiro++;
-        bipe();
         executaPrograma(ponteiro);
       }
     }
@@ -130,20 +162,157 @@ void loop() {
     //De um em um segundo lê o RFID e mede a distância
     mensagemDebug("Lendo RFID...");
     leRfid();
-    //medeDistancia();
+    medeDistancia();
   }
   if((millisAtual%3000==0)&&!executando&&caminhando){
     bipeFino();
   }
-  if((millisAtual%50==0)&&digitalRead(14)){
-    afirmativo();
-    executando = true;
-    executaPrograma(0);
+  if(millisAtual%50==0){
+    leBotao();
+    //executando = true;
+    //executaPrograma(0);
   }
 }
 
+void leBotao() {
+  valorBotao = analogRead(A0);
+  if((valorBotao > 200)&&(timerBotao + timerLongoPressionar < millis())){
+    tone(buzzer, 440, 200); //bipa ao segurar
+  }
+  if((valorBotao > 200)&&!ultimoEstadoBotoes){
+    bipe();
+    ultimoEstadoBotoes = HIGH;
+    ultimoValorBotoes = valorBotao;
+    timerBotao = millis();
+    digitalWrite(led, HIGH);
+  }
+  if((valorBotao <= 200)&&ultimoEstadoBotoes){
+    noTone(buzzer);
+    ultimoEstadoBotoes = LOW;
+    digitalWrite(led, LOW);
+    long timerAtual = millis();
+    if(timerBotao + timerLongoPressionar > timerAtual){
+      mensagemDebug("Toque curto");
+      //Serial.println(timerBotao);
+      //Serial.println(valorBotao);
+      if(ultimoValorBotoes<709) {
+        //botão grava/para
+        mensagemDebug("Pressionado botão gravar/parar no toque curto"); 
+        if(executando) {
+          erro();
+        } else {
+          enderecoEepromGravacao = 0;
+          iniciaGravacaoProgramaRAM();
+        }
+      } else if(ultimoValorBotoes < 761) {
+        //botão A
+        mensagemDebug("Pressionado botão A"); 
+        //carregaProgramadaEeprom(0);
+        ponteiro = 0;
+        executando = true;
+        executaPrograma(ponteiro);
+      } else if(ultimoValorBotoes < 822) {
+        //botão B
+        mensagemDebug("Pressionado botão B"); 
+        //carregaProgramadaEeprom(128); //está resetando o arduino
+        ponteiro = 128;
+        executando = true;
+        executaPrograma(ponteiro);
+      } else if(ultimoValorBotoes < 894) {
+        //botão C
+        mensagemDebug("Pressionado botão C"); 
+        //carregaProgramadaEeprom(256);
+        ponteiro = 256;
+        executando = true;
+        executaPrograma(ponteiro);
+      } else if(ultimoValorBotoes < 977) {
+        //botão D
+        mensagemDebug("Pressionado botão D"); 
+        //carregaProgramadaEeprom(384);
+        ponteiro = 384;
+        executando = true;
+        executaPrograma(ponteiro);
+      } else {
+        //botão E
+        mensagemDebug("Pressionado botão E"); 
+        //carregaProgramadaEeprom(512); //está resetando o arduino
+        ponteiro = 512;
+        executando = true;
+        executaPrograma(ponteiro);
+      }
+    } else {
+      mensagemDebug("Toque longo");
+      if(ultimoValorBotoes<709) {
+        //botão grava/para
+        mensagemDebug("Pressionado botão gravar/parar no toque longo"); 
+        enderecoEepromGravacao = 0;
+        iniciaGravacaoProgramaRAM();
+      } else if(ultimoValorBotoes < 761) {
+        //botão A
+        mensagemDebug("Pressionado botão A"); 
+        enderecoEepromGravacao = 0;
+        iniciaGravacaoProgramaRAM();
+      } else if(ultimoValorBotoes < 822) {
+        //botão B
+        mensagemDebug("Pressionado botão B"); 
+        enderecoEepromGravacao = 128;
+        iniciaGravacaoProgramaRAM();
+      } else if(ultimoValorBotoes < 894) {
+        //botão C
+        mensagemDebug("Pressionado botão C"); 
+        enderecoEepromGravacao = 256;
+        iniciaGravacaoProgramaRAM();
+      } else if(ultimoValorBotoes < 977) {
+        //botão D
+        mensagemDebug("Pressionado botão D"); 
+        enderecoEepromGravacao = 384;
+        iniciaGravacaoProgramaRAM();
+      } else {
+        //botão E
+        mensagemDebug("Pressionado botão E"); 
+        /*
+        enderecoEepromGravacao = 512;
+        iniciaGravacaoProgramaRAM();
+        */
+        apagaEeprom();
+      }
+    }
+  }
+}
+
+void carregaProgramadaEeprom(int enderecoInicial) {
+  mensagemDebug("Carregando programa da EEPROM");
+  for(int i=enderecoInicial;i<enderecoInicial+64;i++){
+    programa[i] = EEPROM.read(i);
+    parametros[i] = EEPROM.read(i+64);
+    Serial.print(i);
+    Serial.print("-");
+  }
+  Serial.println("Carregado!");
+}
+
+void gravaProgramadaEeprom(int enderecoInicial) {
+  mensagemDebug("Salvando programa para EEPROM");
+  for(int i=enderecoInicial;i<enderecoInicial+64;i++){
+    EEPROM.write(i, programa[i]);
+    EEPROM.write(i+64, parametros[i]);
+    Serial.print(i);
+    Serial.print("-");
+  }
+  somGravando();
+  Serial.println("Gravado!");
+}
+
+void apagaEeprom() {
+  //apaga EEPROM
+  mensagemDebug("Apagando EEPROM");
+  for(int i=0;i<1024;i++){
+    EEPROM.write(i, 0);
+  }
+  somGravando();
+  Serial.println("Apagado!");
+}
 void leRfid() {
-  //mensagemDebug("leRfid() lendo RFID...");
   //Códigos de leitura do RFID
   //Se não houver tag, não faz nada.
   if (!mfrc522.PICC_IsNewCardPresent()) return;
@@ -158,19 +327,23 @@ void leRfid() {
     return;
   }
   mfrc522.PICC_HaltA();
-  
   int instrucao = block(0);
   int parametro = block(4);
-  //Se for a instrução 1, gravar programa, inicia a gravação imediata e não passa para as outras funções.
+  //Se for a instrução 1-gravar, gravar programa, inicia a gravação imediata e não passa para as outras funções.
   if(instrucao==1){
-    iniciaGravacaoPrograma();
+    enderecoEepromGravacao = parametro * 128;
+    iniciaGravacaoProgramaRAM();
     return;
   }
-  if(instrucao==2){ //Se a instrução for 2, ele para a gravação. 
+  if(instrucao==2){ //Se a instrução for 2-parar, ele para a gravação. 
+    if(!executando) {
+      gravaProgramadaEeprom(enderecoEepromGravacao); //grava o programa no endereço EEPROM dado. 
+    }
     fim();
     return;
   } 
-  if(instrucao==3){
+  if(instrucao==3){ //Se a instrução for 3-play, executa.
+    carregaProgramadaEeprom(0);
     executando = true;
     executaPrograma(0);
   } else {
@@ -181,16 +354,18 @@ void leRfid() {
       gravaInstrucao(instrucao,parametro);
     } 
   }
-  String temp = "leRfid() ";
-  temp.concat(instrucao);
-  temp.concat(":");
-  temp.concat(parametro);
-  mensagemDebug(temp);
+  tempMsg  = "leRfid() ";
+  tempMsg.concat(instrucao);
+  tempMsg.concat(":");
+  tempMsg.concat(parametro);
+  mensagemDebug(tempMsg);
 }
 
-void iniciaGravacaoPrograma() {
-  mensagemDebug("iniciaGravacaoPrograma() Gravando peças na memória...");
-  passosCaminhar+=2000; //inicia a caminhada do robô buscando peças
+void iniciaGravacaoProgramaRAM() {
+  mensagemDebug("iniciaGravacaoProgramaRAM() Gravando peças na memória...");
+  somGravando();
+  passosCaminhar=2000; //inicia a caminhada do robô buscando peças
+  myservo.write(canetaAcima);
   caminhando = true;
   executando = false;
   ponteiro = 0;
@@ -211,33 +386,42 @@ void gravaInstrucao(int instrucao,int parametro){
 }
 
 void executaPrograma(int ponteiro) {
-  if(programa[ponteiro]!=0) { //não executa numericos
-    int ponteiroTemp = ponteiro + 1;
+  int comando = EEPROM.read(ponteiro);
+  int parametro = EEPROM.read(ponteiro + 64);
+  tempMsg  = "executaPrograma() ";
+  tempMsg.concat(ponteiro);
+  tempMsg.concat("->");
+  tempMsg.concat(comando);
+  tempMsg.concat(":");
+  tempMsg.concat(parametro);
+  mensagemDebug(tempMsg);
+  if(comando!=0) { //não executa numericos
+    int ponteiroSeguinte = ponteiro + 1;
     int quantidNumericas = 0;
     int novoParametro = 0;
-    while(programa[ponteiroTemp]==0) { //procura as peças numéricas de parâmetro
-      ponteiroTemp++;
+    while(EEPROM.read(ponteiroSeguinte)==0) { //procura as peças numéricas de parâmetro
+      ponteiroSeguinte++;
       quantidNumericas++;
       //if(ponteiroTemp>9) break;
     }
     int j=0;
     for(int i=quantidNumericas;i>0;i--){
-      novoParametro = novoParametro + (parametros[ponteiro+i] * pow(10,j)); //transforma as peças numéricas em um parâmetro novo
+      novoParametro = novoParametro + (EEPROM.read(ponteiro+i) * pow(10,j)); //transforma as peças numéricas em um parâmetro novo
       j++;
     }
-    String temp = "executaPrograma() Instrução ";
-    temp.concat(ponteiro);
-    temp.concat("-> ");
-    temp.concat(programa[ponteiro]);
-    temp.concat(":"); 
+    tempMsg  = "executaPrograma() Instrução ";
+    tempMsg.concat(ponteiro);
+    tempMsg.concat("-> ");
+    tempMsg.concat(comando);
+    tempMsg.concat(":"); 
     if(quantidNumericas == 0) { //se houver peças numéricas, elas serão o parâmetro. Se não, será o parâmetro padrão. 
-      temp.concat(parametros[ponteiro]);
-      mensagemDebug(temp);
-      executaInstrucao(programa[ponteiro],parametros[ponteiro]);
+      tempMsg.concat(parametro);
+      mensagemDebug(tempMsg);
+      executaInstrucao(comando,parametro);
     } else {
-      temp.concat(novoParametro);
-      mensagemDebug(temp);
-      executaInstrucao(programa[ponteiro],novoParametro);
+      tempMsg.concat(novoParametro);
+      mensagemDebug(tempMsg);
+      executaInstrucao(comando,novoParametro);
     }
   }
 }
@@ -245,14 +429,14 @@ void executaPrograma(int ponteiro) {
 void executaInstrucao(int instrucao,int parametro){
   switch (instrucao) {
     case 1:
-      iniciaGravacaoPrograma(); //Se a tag for gravar programa, inicia a gravação.
+      iniciaGravacaoProgramaRAM(); //Se a tag for gravar programa, inicia a gravação.
       break;
     case 2:
-      afirmativo();
+      somFimExecucao();
       fim(); //Se a tag for parar, para o movimento e a gravação.
       break;
     case 3:
-      afirmativo();
+      somAfirmativo();
       executando = true; //se a tag for executar, inicia a execução do programa.
       break;
     case 4: //forward
@@ -278,22 +462,28 @@ void executaInstrucao(int instrucao,int parametro){
       ponteirosRepetir[0] = ponteiro; //array impar que guarda o ponteiro que marca o repetir, afim do código poder voltar à instrução.
       ponteirosRepetir[1] = parametro; //array par que guarda o contador do for.
       if(true){ 
-        String temp = "Repetindo o bloco ";
-        temp.concat(ponteirosRepetir[1]);
-        temp.concat(" vezes...");
-        mensagemDebug(temp);
+        tempMsg  = "Repetindo o bloco ";
+        tempMsg.concat(ponteirosRepetir[1]);
+        tempMsg.concat(" vezes...");
+        mensagemDebug(tempMsg);
       }
       break;
     case 9: //fim repetir
       ponteirosRepetir[1]= ponteirosRepetir[1] - 1;
       if(ponteirosRepetir[1]>0){ 
         ponteiro = ponteirosRepetir[0];
-        String temp = "Repetição nº ";
-        temp.concat(ponteirosRepetir[1]);
-        mensagemDebug(temp);
+        tempMsg  = "Repetição nº ";
+        tempMsg.concat(ponteirosRepetir[1]);
+        mensagemDebug(tempMsg);
       } else {
         mensagemDebug("Fim do repetir.");
       }
+      break;
+    case 10: //desce caneta
+      myservo.write(canetaAbaixo);
+      break;
+    case 11: //sobe caneta
+      myservo.write(canetaAcima);
       break;
     default:
       mensagemDebug("executaInstrucao() peça desconhecida!");
@@ -311,13 +501,19 @@ void fim(){
   executando = false;
   ponteiro = 0;
   digitalWrite(latchPin, LOW);
-  shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binário para o shift register
+  shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //desliga os coilers dos motores para não esquentar
   digitalWrite(latchPin, HIGH);
+  myservo.write(canetaAcima);
 }
 
 void medeDistancia(){
   //Mede distância na frente do robô com o sensor ultrasom
-  mensagemDebug("Sensor de distância não instalado!");
+  //distanciaUltrassom = ultrasonic.distanceRead();
+  if(distanciaUltrassom < 5){
+    mensagemDebug("Parada por sensor de distância");
+    erro();
+    fim();
+  }
 }
 
 void caminhar(){
@@ -325,9 +521,9 @@ void caminhar(){
   if(passosCaminhar!=0){
     //debug
     if(passosCaminhar%100==0){
-      String temp = "Caminhando ";
-      temp.concat(passosCaminhar);
-      mensagemDebug(temp); 
+      tempMsg  = "Caminhando ";
+      tempMsg.concat(passosCaminhar);
+      mensagemDebug(tempMsg); 
     }
     direita(1);
     esquerda(1);
@@ -342,9 +538,9 @@ void caminhar(){
   } else if(grausGirar!=0){
     //debug
     if(grausGirar%100==0){
-      String temp = "Girando ";
-      temp.concat(grausGirar);
-      mensagemDebug(temp); 
+      tempMsg  = "Girando ";
+      tempMsg.concat(grausGirar);
+      mensagemDebug(tempMsg); 
     }
     girar();
   } else {
@@ -444,23 +640,29 @@ void girar(){
   if((grausGirar>50)or(grausGirar<50)){ //acelera e freia o passo
       passo = round(passo*0.90);
       if(passo<6) passo=6;
-  } else {
+    } else {
       passo = passo + 1;
-  }
+    }
   if(grausGirar == 0) caminhando = false;
 }
 
-void inicio() {
+void somInicio() {
   digitalWrite(led, HIGH);
-  tone(buzzer, 523, 800);
-  delay(150);
-  tone(buzzer, 587, 800);
-  delay(150);
-  tone(buzzer, 659, 1500);
-  delay(400);
+  for(int i=400;i<1000;i++){
+    tone(buzzer, i, 3);
+    delay(3);
+  }
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1000, 50);
+  delay(50);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1000, 50);
+  delay(50);
   noTone(buzzer);
   digitalWrite(led, LOW);
-  mensagemDebug("inicio() Code_Domino robot iniciado!");
+  mensagemDebug("Code_Domino robot iniciado!");
 }
 
 void erro(){
@@ -476,11 +678,9 @@ void erro(){
 }
 
 void bipe() {
-  digitalWrite(led, HIGH);
   tone(buzzer, 391, 100);
   delay(100);
   noTone(buzzer);
-  digitalWrite(led, LOW);
 }
 
 void bipeFino() {
@@ -489,7 +689,7 @@ void bipeFino() {
   noTone(buzzer);
 }
 
-void afirmativo() {
+void somAfirmativo() {
   tone(buzzer, 440, 200);
   delay(200);
   noTone(buzzer);
@@ -500,6 +700,36 @@ void afirmativo() {
   delay(100);
   tone(buzzer, 523, 400);
   delay(400);
+  noTone(buzzer);
+}
+
+void somFimExecucao() {
+  tone(buzzer, 440, 50);
+  delay(50);
+  tone(buzzer, 494, 50);
+  delay(50);
+  tone(buzzer, 523, 400);
+  delay(400);
+  tone(buzzer, 494, 50);
+  delay(50);
+  tone(buzzer, 440, 50);
+  delay(50);
+  tone(buzzer, 391, 400);
+  delay(400);
+  noTone(buzzer);
+}
+
+void somGravando() {
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 1047, 30);
+  delay(30);
   noTone(buzzer);
 }
 
