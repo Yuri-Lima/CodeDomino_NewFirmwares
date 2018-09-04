@@ -107,6 +107,7 @@ int ponteiro = 0; //ponteiro indicando em que passo está do programa
 int passo = 50; //milissegundos entre cada instrução de movimento.
 int setDistanciaBasica = 10; //distancia básica de movimento do robô em linha reta
 int passosCaminhar = 0; //quantidade de passos que o robô deve percorrer até a próxima instrução.
+int passosCurva = 0; //quantidade de passos em curvas
 int grausGirar = 0; //quantidade de passos que o robô deve percorrer até a próxima instrução.
 int movimentacaoX = 0; //variáveis que gravam o deslocamento total do robô, para a instrução voltar ao início. 
 int movimentacaoY = 0;
@@ -119,6 +120,7 @@ long timerBotao = 0;
 long timerLongoPressionar = 1000;
 int enderecoEepromGravacao = 0;
 int distanciaUltrassom = 150; //distância medida pelo ultrassom
+int raio = 10; //variável raio para comando curvas
 byte binarioDir = B00000000;
 byte binarioEsq = B00000000;
 String tempMsg = ""; //variável temporária de mensagens para serial debug
@@ -511,6 +513,28 @@ void executaInstrucao(int instrucao,int parametro){
       myservo.write(canetaAcima);
       mensagemDebug("Caneta levantada.");
       break;
+    case 12: //define global raio
+      raio = parametro;
+      tempMsg  = "Raio definido para ";
+      tempMsg.concat(raio);
+      mensagemDebug(tempMsg);
+      break;
+    case 13: //curva direita
+      passosCurva = passosCurva + (parametro * 100);
+      caminhando = true;
+      tempMsg  = "Curva a direita por ";
+      tempMsg.concat(parametro);
+      tempMsg.concat("cm");
+      mensagemDebug(tempMsg);
+      break;
+    case 14: //curva esquerda
+      passosCurva = passosCurva + (parametro * 100);
+      caminhando = true;
+      tempMsg  = "Curva a esqueda por ";
+      tempMsg.concat(parametro);
+      tempMsg.concat("cm");
+      mensagemDebug(tempMsg);
+      break;
     default:
       mensagemDebug("executaInstrucao() peça desconhecida!");
       erro();
@@ -569,6 +593,13 @@ void caminhar(){
       mensagemDebug(tempMsg); 
     }
     girar();
+  } else if(passosCurva!=0){
+    if(passosCurva%100==0){
+      tempMsg  = "Fazendo a curva ";
+      tempMsg.concat(passosCurva);
+      mensagemDebug(tempMsg); 
+    }
+    curva();
   } else {
     caminhando = false;
     passo = 50;
@@ -664,12 +695,26 @@ void girar(){
     grausGirar++;
   }
   if((grausGirar>50)or(grausGirar<50)){ //acelera e freia o passo
-      passo = round(passo*0.90);
-      if(passo<6) passo=6;
-    } else {
-      passo = passo + 1;
-    }
+    passo = round(passo*0.90);
+    if(passo<6) passo=6;
+  } else {
+    passo = passo + 1;
+  }
   if(grausGirar == 0) caminhando = false;
+}
+
+void curva(){
+  if(passosCurva > 0){
+    direita(1);
+    //esquerda(0);
+    passosCurva--;
+  } else {
+    //direita(0);
+    esquerda(1); 
+    passosCurva++;
+  }
+  passo = 6;
+  if(passosCurva == 0) caminhando = false;
 }
 
 void somInicio() {
