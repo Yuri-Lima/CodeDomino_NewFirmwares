@@ -124,9 +124,12 @@ byte binarioEsq = B00000000;
 String tempMsg = ""; //variável temporária de mensagens para serial debug
 int canetaAcima = 65;
 int canetaAbaixo = 100;
+String entradaString = "";         // String para recebe3r dados seriais
+boolean stringCompleta = false;  // marca se a string está completa
 
 void setup() {
   Serial.begin(9600);
+  entradaString.reserve(200);
   myservo.attach(servo);
   myservo.write(canetaAcima);
   pinMode(buzzer, OUTPUT);
@@ -171,6 +174,27 @@ void loop() {
     leBotao();
     //executando = true;
     //executaPrograma(0);
+  }
+  if (stringCompleta) {
+    String t1 = entradaString.substring(0,entradaString.indexOf(":"));
+    String t2 = entradaString.substring(entradaString.indexOf(":")+1);
+    executaInstrucao(t1.toInt(),t2.toInt());
+    // clear the string:
+    entradaString = "";
+    stringCompleta = false;
+  }
+}
+
+void serialEvent() {
+  while (Serial.available()) {
+    // pega o novo byte:
+    char inChar = (char)Serial.read();
+    // adiciona-o a String de entrada:
+    entradaString += inChar;
+    // se o caractere for uma linha nova, sinaliza:
+    if (inChar == '\n') {
+      stringCompleta = true;
+    }
   }
 }
 
@@ -481,9 +505,11 @@ void executaInstrucao(int instrucao,int parametro){
       break;
     case 10: //desce caneta
       myservo.write(canetaAbaixo);
+      mensagemDebug("Caneta abaixada.");
       break;
     case 11: //sobe caneta
       myservo.write(canetaAcima);
+      mensagemDebug("Caneta levantada.");
       break;
     default:
       mensagemDebug("executaInstrucao() peça desconhecida!");
