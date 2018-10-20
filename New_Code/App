@@ -1,10 +1,21 @@
 /*
 
-   Criar botão reset diretamente da placa arduino, sempre que houver necessidade de parar a execução do codigo.
+   Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o do codigo.
+   Nova roda 3D https://www.thingiverse.com/thing:862438/files
 
 */
 int x = 0;
 #define botao_gravar_parar 709
+#define m_erro 0.03
+int r_360= 2050;//2100 passo para 360° da roda
+//Dados da Roda C=2*Pi*r
+#define raioRoda  3.30 //Raio da roda
+float C = (2 * PI * raioRoda);
+//Dados do Centro do Eixo Rotação levando referencia o centro do Carro C=2*Pi*r
+#define raioEixo  4.5 //Raio do Eixo central do carro. (360° em relação ao centro do carro)
+float C_ = (2 * PI * raioEixo);
+float revol_ = C_ / C;//Nos paramentos originais 1.363~=1.4 ==> 1 voltas e 0.400 (a roda precisa da 1,4 voltas para o carro rodar em seu eixo)
+int e_360 = r_360 * (revol_ + m_erro);//passo para rotação do proprio eixo
 
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
@@ -19,27 +30,28 @@ long timerLongoPressionar = 1000;
 int latchPin = 8; //Pin connected to ST_CP of 74HC595
 int clockPin = 7; //Pin connected to SH_CP of 74HC595
 int dataPin = 6; ////Pin connected to DS of 74HC595
-int frenagem = 20; //milissegundos entre cada instrução de movimento.
-int passo = 50; //milissegundos entre cada instrução de movimento.
-int setDistanciaBasica = 10; //distancia básica de movimento do robô em linha reta
+int frenagem = 20; //milissegundos entre cada instruÃ§Ã£o de movimento.
+int passo = 50; //milissegundos entre cada instruÃ§Ã£o de movimento.
+int setDistanciaBasica = 10; //distancia bÃ¡sica de movimento do robÃ´ em linha reta
 int passosCaminhar = 0;
-boolean caminhando = false; //define se o robô está em movimento ou não
+bool caminhando = false; //define se o robÃ´ estÃ¡ em movimento ou nÃ£o
 byte binarioDir = B00000000;
 byte binarioEsq = B00000000;
-int passoDir = 1; //vai de 1 a 4
-int passoEsq = 1;
+
 bool botao = false;
 float angle = 0;
 int **m;
 
 void setup()
 {
+   //revol_=  r_360 / revol_; //descubro quanto é 90° 
   Serial.begin(9600);
+  Serial.println(e_360);
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   digitalWrite(latchPin, LOW);
-  shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binário para o shift register
+  shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 }
 
 void loop()
@@ -51,9 +63,10 @@ void loop()
     millisAnterior = millisAtual;
     if (botao)
     { 
-      Serial.println(long((2800*45)/360));  
-      //formas(4);
+
+      formas(0);
       botao = !botao;
+      //Serial.println(revol_);
     }
   }
 
@@ -64,19 +77,26 @@ void loop()
     leBotao();
   }
 }
-//Ref.: https://youtu.be/g2Tco_v73Pc ---> Alocação dinamica
-int** alocarMatriz(int Linhas,int Colunas){ //Recebe a quantidade de Linhas e Colunas como Parâmetro
+
+//Ref.: https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
+int** alocarMatriz(int Linhas,int Colunas){ //Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
  
-  int i,j; //Variáveis Auxiliares
+  int i,j; //VariÃ¡veis Auxiliares
  
   int **m = (int**)malloc(Linhas * sizeof(int*)); //Aloca um Vetor de Ponteiros
    if(m==NULL)
     {
-        Serial.println("Erro de Menoria");
+        Serial.println("Erro de alocacao em linha");
+        return 0;
     }
     for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
     {  
-        m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posição do Vetor de Ponteiros.
+        m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posiÃ§Ã£o do Vetor de Ponteiros.
+        if(m[i]==NULL)
+        {
+            Serial.println("Erro de alicacao em coluna");
+            return 0;
+        }
         for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
         { 
             m[i][j] = 0; //Inicializa com 0.
@@ -94,38 +114,55 @@ void desalocarMatriz(int **m, int Linhas)
     }
     free(m);
 }
-bool formas(int edro)
+int formas(int edro)
 {   
    // int p = convertAngulo(45);
    switch(edro)
    {
-       case 3:
+       case 0: //Circulo em 90°
+            m = alocarMatriz(1,edro+1);
+            m[0][0] = 0; m[0][1] = 1; m[0][2] = long(e_360); //linha 1Âª comando
+            caminhar(m[0][0], m[0][1],  m[0][2], 0, 1);
+            Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+            delay(10);
+            desalocarMatriz(m,1);
+        break;
+        case 1: //Reta em 
+            m = alocarMatriz(1,edro);
+            m[0][0] = 0; m[0][1] = 0; m[0][2] = 2050; //linha 1Âª comando
+            caminhar(m[0][0], m[0][1],  m[0][2], 0, NULL);
+            Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[1][1]);Serial.print(" - ");Serial.println(m[2][2]);
+            delay(10);
+            desalocarMatriz(m,1);
+        break;
+       case 3://Triangulo em 45°
+            
             m = alocarMatriz(6,edro);//6 linhas e 3 colunas
-            m[0][0] = 1; m[0][1] = 0; m[0][2] = 350; //linha 1ª comando
-            m[1][0] = 0; m[1][1] = 0; m[1][2] = 1000; //linha 2ª comando
-            m[2][0] = 0; m[2][1] = 1; m[2][2] = 700; //linha 3ª comando
-            m[3][0] = 1; m[3][1] = 1; m[3][2] = 1000; //linha 4ª comando
-            m[4][0] = 0; m[4][1] = 1; m[4][2] = 350; //linha 5ª comando
-            m[5][0] = 0; m[5][1] = 0; m[5][2] = 1000; //linha 6ª comando
+            m[0][0] = 1; m[0][1] = 0; m[0][2] = (long(r_360) * long(45)) / long(360); //linha 1Âª comando
+            m[1][0] = 0; m[1][1] = 0; m[1][2] = (long(r_360) * long(10)) / long(C); //linha 2Âª comando
+            m[2][0] = 0; m[2][1] = 1; m[2][2] = (long(r_360) * long(90)) / long(360); //linha 3Âª comando
+            m[3][0] = 1; m[3][1] = 1; m[3][2] = (long(r_360) * long(10)) / long(C); //linha 4Âª comando
+            m[4][0] = 0; m[4][1] = 1; m[4][2] = (long(r_360) * long(45)) / long(360);  //linha 5Âª comando
+            m[5][0] = 0; m[5][1] = 0; m[5][2] = (long(r_360) * long(10)) / long(C);  //linha 6Âª comando
             for(int i = 0;i < edro*2;i++)
             {
-                    caminhar(m[i][0], m[i][1],  m[i][2]);
-                    //Serial.print(m[i][j]);Serial.print(" - ");Serial.print (m[i][j+k]);Serial.print(" - ");Serial.println(m[i][j+(k+1)]);
-                    delay(200);
+                caminhar(m[i][0], m[i][1],  m[i][2], 0, NULL);
+                Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
+                delay(50);
             }
             desalocarMatriz(m,6);
         break;  
-        case 4:
+        case 4: //Quadrado 10x10 em 90°
             m = alocarMatriz(2,edro);
-            m[0][0] = 0; m[0][1] = 0; m[0][2] = 1000; //linha 1ª comando
-            m[1][0] = 1; m[1][1] = 0; m[1][2] = 700; //linha 2ª comando
+            m[0][0] = 0; m[0][1] = 0; m[0][2] = (long(r_360) * long(10)) / long(C);; //linha 1Âª comando
+            m[1][0] = 1; m[1][1] = 0; m[1][2] = (long(r_360) * long(90)) / long(360);; //linha 2Âª comando
             for(int i = 0;i < 4;i++)
             {  
                 for(int j = 0;j < 2;j++)
                 { 
-                    caminhar(m[j][0], m[j][1],  m[j][2]);
+                    caminhar(m[j][0], m[j][1],  m[j][2], 0, NULL);
                     //Serial.print(m[i][j]);Serial.print(" - ");Serial.print (m[i][j+k]);Serial.print(" - ");Serial.println(m[i][j+(k+1)]);
-                    delay(100);
+                    delay(50);
                 }
             }
             desalocarMatriz(m,2);
@@ -135,41 +172,59 @@ bool formas(int edro)
     }
     return 1;    
 }
-int convertAngulo(int angulo)
+long convertAngulo(int _angulo)
 {  
-    return (2800*angulo)/360;
+    long _PassoEixo = 2800;//como ref. ponto central do eixo
+    return (_PassoEixo * _angulo)/360;
 }
 
-int caminhar(int dir, int esq, int passosCaminhar)
+int caminhar(int dir, int esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 { //0 - direto, 1 - esquerda, 2 - direita, -1 tras)
 
   while (passosCaminhar > 0)
   {
     digitalWrite(latchPin, LOW);
-    direita(dir); esquerda(esq);
+    
+    if(_freqRot > 1)
+    {
+        if(_CW_CCW == 1) 
+        {
+            if((passosCaminhar % _freqRot) == 1) direita(dir); 
+        }
+        else if(_CW_CCW == 0)
+        {
+            if((passosCaminhar % _freqRot) == 1) esquerda(dir);
+        }
+    }
+    else
+    {
+        direita(dir); 
+        esquerda(esq);
+    }
+    shiftOut(dataPin, clockPin, MSBFIRST, binarioEsq | binarioDir ); //envia resultado binÃ¡rio para o shift register
+    digitalWrite(latchPin, HIGH);
     if (passosCaminhar > frenagem) //acelera e freia o passo
     {
-      passo = round(passo * 0.90); //milissegundos entre cada instrução de movimento.
-      //if(passo<3) passo=3;
+      passo = round(passo * 0.90); //milissegundos entre cada instruÃ§Ã£o de movimento.
     }
     else
     {
       passo = passo + 1;
     }
     passosCaminhar--;
-    delay(50);
+    delay(5);
     //Serial.println(passosCaminhar);
-    shiftOut(dataPin, clockPin, MSBFIRST, binarioEsq | binarioDir ); //envia resultado binário para o shift register
-    digitalWrite(latchPin, HIGH);
+
   }
   caminhando = false;
   passo = 50;
   return passosCaminhar == 0 ? 0 : 1;
 }
 
-void esquerda(int direcao)
+bool esquerda(int _direcao)
 {
-  if (direcao == 1)
+    static int passoEsq = 1;
+  if (_direcao == 1)
   {
     passoEsq++;
   }
@@ -201,9 +256,10 @@ void esquerda(int direcao)
   }
 }
 
-void direita(int direcao)
+bool direita(int _direcao)
 {
-  if (direcao == 1)
+    static int passoDir = 1; 
+  if (_direcao == 1)
   {
     passoDir++;
   }
