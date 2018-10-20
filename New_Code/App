@@ -1,52 +1,112 @@
+//Programa : Code Dominoe
+//Autor : Daniel Chagas / Patrick / Yuri Lima
 /*
-
    Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o do codigo.
    Nova roda 3D https://www.thingiverse.com/thing:862438/files
+*/
+//==================================================================================================================
+/*
+    --> Possiveis questionamentos <--
+    (Quantos passos para a roda fazer 360º?) --> Etapa 2
+    ((Quantos passos para o CARRO fazer 360º?)) --> Etapa 4
+
+    Etapa 1 - Motor
+    1º Modelo do motor de passo, para saber quantos graus por passo. 
+    2º Vamos dividir 360° por graus para obter quantos passos são necessários para 360°.
+    O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações.
+    _____________________________________________________________________________________________
+    | http://robocraft.ru/files/datasheet/28BYJ-48.pdf 
+    | Exemplos: (FullStep = 11,25° / 64 => 0.1757°) Motor de Passo 28BYJ-48                        |
+    | Exemplos: 1Step = 5.625 --> FullStep = 2 * 5.625° => 11,25° ---> 360 / 0.1757° ---> p' = 2000 Passos |
+    ---------------------------------------------------------------------------------------------
+    Etapa 2 - Roda                                  
+    1º Precisamos das informações do diametro da RODA para obter o RAIO.
+    2º Na formula C"=2*PI*r vamos obter a distancia percorrida em 360°.
+
+    Etapa 3 - Carro
+    1º Precisamos das informações do diametro entre as duas rodas, para obter o RAIO.
+    2º Na formula C'=2*PI*r vamos obter a distancia percorrida em 360°, ou seja, no seu proprio eixo.
+
+    Etapa 4 - Revoluções                   
+    1º voltas = C" / C' Quantas voltas a roda do carro terá que fazer para que o carro realizar 360° em seu proprio eixo.
+
+    Etapa 5 - Passos 
+    1º P" = p' * voltas Em P" vamos obter a quantidade de passos para 360°
+
+    O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações. Recomendado >= 0.01
+
 
 */
-int x = 0;
-#define botao_gravar_parar 709
-#define m_erro 0.03
-int r_360= 2050;//2100 passo para 360° da roda
-//Dados da Roda C=2*Pi*r
-#define raioRoda  3.30 //Raio da roda
-float C = (2 * PI * raioRoda);
-//Dados do Centro do Eixo Rotação levando referencia o centro do Carro C=2*Pi*r
-#define raioEixo  4.5 //Raio do Eixo central do carro. (360° em relação ao centro do carro)
-float C_ = (2 * PI * raioEixo);
-float revol_ = C_ / C;//Nos paramentos originais 1.363~=1.4 ==> 1 voltas e 0.400 (a roda precisa da 1,4 voltas para o carro rodar em seu eixo)
-int e_360 = r_360 * (revol_ + m_erro);//passo para rotação do proprio eixo
+//=====================================================================================================
+//Etapa 1 - Motor
+const float GrausPassoDoMotor = 0.1757;
+const float m_erro_r = 1.05;
+float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
+//Etapa 2 - Roda 
+const float raioRoda =  3.30;
+float C = (2 * PI * raioRoda); //C"
+
+//Etapa 3 - Carro
+const float raioEixo = 4.5; 
+float C_ = (2 * PI * raioEixo); //C'
+
+//Etapa 4 - Revoluções 
+float revol_ = C_ / C;//C" / C'
+
+//Etapa 5 - Passos
+const float m_erro_e = 0.03;
+int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
+//=====================================================================================================
+
+#define botao_gravar_parar 709
+//=========================================================================================
+//Função Loop
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 unsigned long millisAnterior2 = 0;
 unsigned long millisAtual2 = 0;
-long timerBotao = 0;
 
+//=========================================================================================
+//Função Lerbotao
 int valorBotao = 0;
-bool ultimoEstadoBotoes = LOW;
-int ultimoValorBotoes = 0;
-long timerLongoPressionar = 1000;
+
+//=========================================================================================
+//Função Loop e Caminhar
+int passo = 50; //milissegundos entre cada instruÃ§Ã£o de movimento.
+
+//=========================================================================================
+//Função Caminhar
 int latchPin = 8; //Pin connected to ST_CP of 74HC595
 int clockPin = 7; //Pin connected to SH_CP of 74HC595
 int dataPin = 6; ////Pin connected to DS of 74HC595
-int frenagem = 20; //milissegundos entre cada instruÃ§Ã£o de movimento.
-int passo = 50; //milissegundos entre cada instruÃ§Ã£o de movimento.
-int setDistanciaBasica = 10; //distancia bÃ¡sica de movimento do robÃ´ em linha reta
 int passosCaminhar = 0;
-bool caminhando = false; //define se o robÃ´ estÃ¡ em movimento ou nÃ£o
+int frenagem = 20; //milissegundos entre cada instruÃ§Ã£o de movimento.
+
+//=========================================================================================
+//Função Caminhar e Esqueda e Direita
 byte binarioDir = B00000000;
 byte binarioEsq = B00000000;
 
+//=========================================================================================
+//Função Lerbotao e loop
 bool botao = false;
-float angle = 0;
+
+//=========================================================================================
+//Função alocarMatriz e desalocarMatriz
 int **m;
 
 void setup()
-{
-   //revol_=  r_360 / revol_; //descubro quanto é 90° 
+{ 
   Serial.begin(9600);
-  Serial.println(e_360);
+  //=========================================================================================
+  Serial.print(F("Passos para a RODA rodar (360): "));  Serial.println(r_360);
+  Serial.print(F("Distancia pecorrida pela RODA (360): ")); Serial.println(C);
+  Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (360): "));    Serial.println(C_);
+  Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO 360: "));   Serial.println(revol_);
+  Serial.print(F("Quantos passos para o CARRO rodar no EIXO 360: "));   Serial.println(e_360);
+  //Serial.println(convertAngulo(45)); //45° é quantos passos?
+  //=========================================================================================
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
@@ -172,10 +232,9 @@ int formas(int edro)
     }
     return 1;    
 }
-long convertAngulo(int _angulo)
+int convertAngulo(float _angulo)
 {  
-    long _PassoEixo = 2800;//como ref. ponto central do eixo
-    return (_PassoEixo * _angulo)/360;
+    return int((e_360 * _angulo) / 360);
 }
 
 int caminhar(int dir, int esq, int passosCaminhar, int _freqRot, int _CW_CCW)
@@ -216,7 +275,6 @@ int caminhar(int dir, int esq, int passosCaminhar, int _freqRot, int _CW_CCW)
     //Serial.println(passosCaminhar);
 
   }
-  caminhando = false;
   passo = 50;
   return passosCaminhar == 0 ? 0 : 1;
 }
