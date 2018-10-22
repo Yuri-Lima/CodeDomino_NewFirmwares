@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "defines": [
+                "ARDUINO=10800"
+            ],
+            "includePath": [
+                "C:\\Users\\yuri\\Documents\\Arduino\\libraries\\Ultrasonic\\src",
+                "C:\\Program Files\\Arduino\\libraries\\Servo\\src",
+                "C:\\Users\\yuri\\Documents\\Arduino\\libraries\\MFRC522\\src",
+                "C:\\Program Files\\Arduino\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files\\Arduino\\tools\\**",
+                "C:\\Program Files\\Arduino\\hardware\\tools\\**",
+                "C:\\Users\\yuri\\Documents\\Arduino\\hardware\\tools\\**",
+                "C:\\Program Files\\Arduino\\libraries\\**",
+                "C:\\Users\\yuri\\Documents\\Arduino\\libraries\\**"
+            ],
+            "forcedInclude": [
+                "C:\\Program Files\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+            ],
+            "intelliSenseMode": "msvc-x64",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
