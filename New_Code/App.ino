@@ -75,10 +75,6 @@ unsigned long millisAnterior2 = 0;
 unsigned long millisAtual2 = 0; 
 
 //=========================================================================================
-//Função Lerbotao
-int valorBotao = 0;
-
-//=========================================================================================
 //Função Loop e Caminhar
 int passo = 50; //milissegundos entre cada instruÃ§Ã£o de movimento.
 
@@ -99,7 +95,9 @@ byte binarioEsq = B00000000;
 //Função Lerbotao e loop
 bool botao = false;
 #define botao_gravar_parar 709
-
+//=========================================================================================
+//Função direction
+int passoEsq = 4, passoDir = 4;
 //=========================================================================================
 //Função alocarMatriz e desalocarMatriz
 int **m;
@@ -141,7 +139,7 @@ void loop()
 		}
 	}
 	millisAtual2 = millis();
-	if (millisAtual2 - millisAnterior2 >= 250)
+	if (millisAtual2 - millisAnterior2 >= 300)
 	{
 		millisAnterior2 = millisAtual2;
 		option = leBotao();
@@ -155,8 +153,8 @@ int formas(int edro)
 	{
 		case 7: //Rotação no eixo
 			ang = e_360; //escolha o angulo	
-			m = alocarMatriz(1,1);
-			m[0][0] = 0; m[0][1] = 1; m[0][2] = ang; //linha 1Âª comando
+			m = alocarMatriz(1,3);
+			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
 			caminhar(m[0][0], m[0][1],  m[0][2], 0, 1);
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			delay(10);
@@ -164,21 +162,20 @@ int formas(int edro)
 		break;
 		case 2: //Reta em 
 			dist = 10;// coloque aqui a distancia em cm
-			m = alocarMatriz(1,1);
-			m[0][0] = 0; m[0][1] = 0; m[0][2] = (r_360 * dist) / C; //linha 1Âª comando
+			m = alocarMatriz(1,3);
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * dist) / C; //linha 1Âª comando
+			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			caminhar(m[0][0], m[0][1],  m[0][2], 0, 0);
-			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[1][1]);Serial.print(" - ");Serial.println(m[2][2]);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
 		case 1: //Rotação angular no proprio eixo
-			ang = 90; //escolha o angulo
-			m = alocarMatriz(1,1);
-			m[0][0] = 0; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
-
-			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
-			caminhar(m[0][0], m[0][1],  m[0][2], 0, 0);
-			
+			ang = 1000; //escolha o angulo
+			m = alocarMatriz(1,3);
+			m[0][0] = 1; m[0][1] = -1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
+			//Serial.print(" Case 1 ");
+			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			caminhar(m[0][0], m[0][1],  m[0][2], 6, 1); 
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -193,12 +190,12 @@ int formas(int edro)
 					https://www.dobitaobyte.com.br/sirene-com-arduino/
 			*/
 			m = alocarMatriz(6,3);//6 linhas e 3 colunas
-			m[0][0] = 0; m[0][1] = 0; m[0][2] = (r_360 * cateto_O) / C; //Cateto oposto
-			m[1][0] = 0; m[1][1] = 1; m[1][2] = (e_360 * (90 - ang)) / 360; //complemento de angulo
-			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
-			m[3][0] = 0; m[3][1] = 1; m[3][2] = (e_360 * ang) / 360; //angulo que desejamos
-			m[4][0] = 0; m[4][1] = 0; m[4][2] = (r_360 * (cateto_O / tan(ang * (PI/180)))) / C; // cateto adjacente TOA
-			m[5][0] = 1; m[5][1] = 0; m[5][2] = (e_360 * 90) / 360; //Volta na posição que iniciou
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * cateto_O) / C; //Cateto oposto
+			m[1][0] = 1; m[1][1] = -1; m[1][2] = (e_360 * (90 - ang)) / 360; //complemento de angulo
+			m[2][0] = -1; m[2][1] = -1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
+			m[3][0] = 1; m[3][1] = -1; m[3][2] = (e_360 * ang) / 360; //angulo que desejamos
+			m[4][0] = 1; m[4][1] = 1; m[4][2] = (r_360 * (cateto_O / tan(ang * (PI/180)))) / C; // cateto adjacente TOA
+			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * 90) / 360; //Volta na posição que iniciou
 			for(int i = 0;i < 6;i++)
 			{	
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
@@ -210,8 +207,8 @@ int formas(int edro)
 		case 5: //Quadrado 10x10 em 90°
 			ang = 90; //escolha o angulo
 			m = alocarMatriz(2,3);
-			m[0][0] = 0; m[0][1] = 0; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[1][0] = 1; m[1][1] = 0; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
+			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
 			for(int i = 0;i < 4;i++)
 			{  
 				for(int j = 0;j < 2;j++)
@@ -226,12 +223,12 @@ int formas(int edro)
 		case 6: //Teste 1
 			ang = 90;
 			m = alocarMatriz(6,3);
-			m[0][0] = 0; m[0][1] = 0; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[1][0] = 1; m[1][1] = 0; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
-			m[2][0] = 0; m[2][1] = 0; m[2][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[3][0] = 0; m[3][1] = 1; m[3][2] = (e_360 * ang) / 360; //linha 1Âª comando
-			m[4][0] = 0; m[4][1] = 0; m[4][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[5][0] = 1; m[5][1] = 0; m[5][2] = (e_360 * (ang * 2)) / 360; //linha 1Âª comando
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
+			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
+			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * 10) / C; //linha 1Âª comando
+			m[3][0] = 1; m[3][1] = -1; m[3][2] = (e_360 * ang) / 360; //linha 1Âª comando
+			m[4][0] = 1; m[4][1] = 1; m[4][2] = (r_360 * 10) / C; //linha 1Âª comando
+			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * (ang * 2)) / 360; //linha 1Âª comando
 			for(int j = 0;j < 6;j++)
 			{  
 				Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
@@ -251,7 +248,7 @@ int formas(int edro)
 					https://www.dobitaobyte.com.br/sirene-com-arduino/
 			*/
 			m = alocarMatriz(1,3);//6 linhas e 3 colunas
-			m[2][0] = 0; m[2][1] = 0; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
+			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
 			for(int i = 0;i < edro*2;i++)
 			{	
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
@@ -267,79 +264,77 @@ int formas(int edro)
 }
 int leBotao()
 {
-	int option;
+	short int option, valorBotao = 0;
 	valorBotao = analogRead(A0);
 	//Serial.println(valorBotao);
 	if ((valorBotao > 100) && (valorBotao < botao_gravar_parar))
 	{
 		botao = !botao;
 		option =1;
-		Serial.println("1");
+		//Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > botao_gravar_parar +10) && (valorBotao < 724 + 5))
 	{
 		botao = !botao;
 		option =2;
-		Serial.println("2");
+		Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > 724 + 10) && (valorBotao < 780 +5))
 	{
 		botao = !botao;
 		option =3;
-		Serial.println("3");
+		Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > 780 + 10) && (valorBotao < 847 +5))
 	{
 		botao = !botao;
 		option =4;
-		Serial.println("4");
+		Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > 847 + 10) && (valorBotao < 924 +5))
 	{
 		botao = !botao;
 		option =5;
-		Serial.println("5");
+		Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > 924 + 10) && (valorBotao < 1018 +5))
 	{
 		botao = !botao;
 		option =6;
-		Serial.println("6");
+		Serial.println(option);
 		//delay(1000);
 	}
 	delay(5);
 	return option;
 }
-int caminhar(int dir, int esq, int passosCaminhar, int _freqRot, int _CW_CCW)
-{ //0 - direto, 1 - esquerda, 2 - direita, -1 tras)
-
+int caminhar(int _esq, int _dir, int passosCaminhar, int _freqRot, int _CW_CCW)
+{ //0 - Parado, 1 - frente , -1 - tras)
+	//Serial.print(_esq);Serial.print(" - ");Serial.println(_dir);
 	while (passosCaminhar > 0)
 	{
 		digitalWrite(latchPin, LOW);
-		if(_freqRot > 1)
+		if(_freqRot > 0)
 		{
 			if(_CW_CCW == 1) 
-			{
-				if((passosCaminhar % _freqRot) == 1) direita(dir);
-				esquerda(dir); 
+			{	
+				//Serial.println(passosCaminhar % _freqRot);
+				direction(_esq, passosCaminhar % _freqRot );
 			}
-			else if(_CW_CCW == 0)
+			else if(_CW_CCW == -1)
 			{
-				if((passosCaminhar % _freqRot) == 1) esquerda(dir);
-				direita(dir);
+				direction(-(passosCaminhar % _freqRot == _CW_CCW ), _dir);
 			}
 		}
 		else
 		{
-			direita(dir); 
-			esquerda(esq);
+			direction(_esq, _dir);
 		}
-		shiftOut(dataPin, clockPin, MSBFIRST, binarioEsq | binarioDir ); //envia resultado binÃ¡rio para o shift register
+		shiftOut(dataPin, clockPin, MSBFIRST, binarioEsq | binarioDir); //envia resultado binÃ¡rio para o shift register
 		digitalWrite(latchPin, HIGH);
 		if (passosCaminhar > frenagem) //acelera e freia o passo
 		{
@@ -356,78 +351,100 @@ int caminhar(int dir, int esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 	passo = 50;
 	return passosCaminhar == 0 ? 0 : 1;
 }
-int convertAngulo(float _angulo)
-{  
-	return int((e_360 * _angulo) / 360);
-}
-bool esquerda(int _direcao)
-{
-		static int passoEsq = 1;
-	if (_direcao == 1)
+void direction(int _esq, int _dir)
+{	
+	bool flag_esq = true, flag_dir=true;
+
+	//em breve refazer essa logica
+	if((_esq > 1) || (_esq == 0)) flag_esq = false;
+	if((_dir > 1) || (_dir == 0)) flag_dir = false;
+	if((_esq < -1) || (_esq == 0)) flag_esq = false;
+	if((_dir < -1) || (_dir == 0)) flag_dir = false;
+
+	if (_esq == 1 && flag_esq)
 	{
+		if(passoEsq == 4) passoEsq = 0;
 		passoEsq++;
 	}
-	else
+	else if (_esq == -1 && flag_esq)
 	{
+		if(passoEsq == 1) passoEsq = 5;
 		passoEsq--;
 	}
-
-	if (passoEsq > 4) passoEsq = 1;
-	if (passoEsq < 1) passoEsq = 4;
-
-	switch (passoEsq)
+	//=========================================
+	if (_dir == 1 && flag_dir)
 	{
-		case 1:
-			binarioEsq = B10010000;//144
-		break;
-
-		case 2:
-			binarioEsq = B11000000;//192
-		break;
-
-		case 3:
-			binarioEsq = B01100000;//96
-		break;
-
-		case 4:
-			binarioEsq = B00110000;//48
-		break;
-	}
-}
-
-bool direita(int _direcao)
-{
-	static int passoDir = 1; 
-	if (_direcao == 1)
-	{
+		if(passoDir == 4) passoDir = 0;
 		passoDir++;
 	}
-	else
-	{
+	else if (_dir == -1 && flag_dir)
+	{	
+		if(passoDir == 1) passoDir = 5; 
 		passoDir--;
 	}
-
-	if (passoDir > 4) passoDir = 1;
-	if (passoDir < 1) passoDir = 4;
-
-	switch (passoDir)
+	//Serial.print(passoDir);Serial.print(" - ");Serial.println(passoEsq);
+	if(flag_esq)
 	{
-		case 4:
-			binarioDir = B00001100;//12
-		break;
+		switch (abs(passoEsq))
+		{
+			case 0:
+				//Serial.print(abs(passoEsq));
+				binarioEsq = B00000000;
+			break;
+			case 1:
+				//Serial.print(abs(passoEsq));
+				binarioEsq = B10010000;//144
+			break;
 
-		case 3:
-			binarioDir = B00000110;//6
-		break;
+			case 2:
+				//Serial.print(abs(passoEsq));
+				binarioEsq = B11000000;//192
+			break;
 
-		case 2:
-			binarioDir = B00000011;//3
-		break;
+			case 3:
+				//Serial.print(abs(passoEsq));
+				binarioEsq = B01100000;//96
+			break;
 
-		case 1:
-			binarioDir = B00001001; //9
-		break;
+			case 4:
+				//Serial.print(abs(passoEsq));
+				binarioEsq = B00110000;//48
+			break;
+			default: return;
+		}
 	}
+	if(flag_dir)
+	{
+		switch (abs(passoDir))
+		{
+			case 1:
+				//Serial.println(abs(passoDir));
+				binarioDir = B00001100;//12
+			break;
+
+			case 2:
+				//Serial.println(abs(passoDir));
+				binarioDir = B00000110;//6
+			break;
+
+			case 3:
+				//Serial.println(abs(passoDir));
+				binarioDir = B00000011;//3
+			break;
+
+			case 4:
+				//Serial.println(abs(passoDir));
+				binarioDir = B00001001; //9
+			break;
+			case 0:
+				//Serial.println(abs(passoDir));
+				binarioDir = B00000000; 
+			break;
+			default: return;
+		}
+	}
+	flag_esq = true;
+	flag_dir= true;
 }
 
 //Ref.: https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
@@ -464,4 +481,8 @@ void desalocarMatriz(int **m, int Linhas)
 		free(m[i]);
 	}
 	free(m);
+}
+int convertAngulo(float _angulo)
+{  
+	return int((e_360 * _angulo) / 360);
 }
