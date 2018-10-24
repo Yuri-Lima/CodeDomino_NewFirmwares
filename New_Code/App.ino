@@ -46,18 +46,18 @@ const float m_erro_r = 1.05;
 float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
-const float raioRoda =  3.30;
+const float raioRoda =  3.275;
 float C = (2 * PI * raioRoda); //C"
 
 //Etapa 3 - Carro
-const float raioEixo = 4.5; 
+const float raioEixo = 4.285; 
 float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
 float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.045;
+const float m_erro_e = 0.075; //45
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 /*
@@ -73,38 +73,24 @@ unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 unsigned long millisAnterior2 = 0;
 unsigned long millisAtual2 = 0; 
-
 //=========================================================================================
-//Função Loop e Caminhar
-int passo = 50; //milissegundos entre cada instruÃ§Ã£o de movimento.
-
+//Função Loop
+const int timer = 300;
 //=========================================================================================
 //Função Caminhar
-int latchPin = 8; //Pin connected to ST_CP of 74HC595
-int clockPin = 7; //Pin connected to SH_CP of 74HC595
-int dataPin = 6; ////Pin connected to DS of 74HC595
-int passosCaminhar = 0;
-int frenagem = 20; //milissegundos entre cada instruÃ§Ã£o de movimento.
-
-//=========================================================================================
-//Função Caminhar e Esqueda e Direita
-byte binarioDir = B00000000;
-byte binarioEsq = B00000000;
-
+const int latchPin = 8; //Pin connected to ST_CP of 74HC595
+const int clockPin = 7; //Pin connected to SH_CP of 74HC595
+const int dataPin = 6; ////Pin connected to DS of 74HC595
 //=========================================================================================
 //Função Lerbotao e loop
 bool botao = false;
 #define botao_gravar_parar 709
 //=========================================================================================
-//Função direction
-int passoEsq = 4, passoDir = 4;
-//=========================================================================================
 //Função alocarMatriz e desalocarMatriz
-int **m;
+int **m;//Matriz bidimensional
 
 void setup()
 { 
-	//DEBUGPRINTLN0("Started SETUP");
 	Serial.begin(9600);
 	//=========================================================================================
 	Serial.print(F("Passos para a RODA rodar (r_360): "));  Serial.println(r_360);
@@ -112,7 +98,6 @@ void setup()
 	Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (C_): "));    Serial.println(C_);
 	Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO (revol_): "));   Serial.println(revol_);
 	Serial.print(F("Quantos passos para o CARRO rodar no EIXO (e_360): "));   Serial.println(e_360);
-	//Serial.println(convertAngulo(45)); //45° é quantos passos?
 	//=========================================================================================
 	pinMode(latchPin, OUTPUT);
 	pinMode(clockPin, OUTPUT);
@@ -124,39 +109,45 @@ void setup()
 void loop()
 {
 	static int option;
+	bool callback_loop = false;
 	millisAtual = millis();
 	//A cada tempo do passo, execute
-	if (millisAtual - millisAnterior >= passo)
+	if (millisAtual - millisAnterior >= timer)
 	{
 		millisAnterior = millisAtual;
 		if (botao)
 		{ 
 			delay(1000);
-			formas(option);
+			callback_loop = formas(option);
 			botao = !botao;
 			option = 0;
-			//Serial.println(revol_);
 		}
 	}
-	millisAtual2 = millis();
-	if (millisAtual2 - millisAnterior2 >= 300)
+	if(!callback_loop)
 	{
-		millisAnterior2 = millisAtual2;
-		option = leBotao();
+		millisAtual2 = millis();
+		if (millisAtual2 - millisAnterior2 >= timer)
+		{
+			millisAnterior2 = millisAtual2;
+			option = leBotao();
+		}
 	}
+	else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
+	
 }
-int formas(int edro)
+bool formas(int edro)
 {   
 	// int p = convertAngulo(45);
 	float ang, dist, cateto_O;
+	bool callback;
 	switch(edro)
 	{
-		case 7: //Rotação no eixo
+		case 1: //Rotação no eixo
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
-			caminhar(m[0][0], m[0][1],  m[0][2], 0, 1);
-			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 1);
+			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -164,18 +155,18 @@ int formas(int edro)
 			dist = 10;// coloque aqui a distancia em cm
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * dist) / C; //linha 1Âª comando
-			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
-			caminhar(m[0][0], m[0][1],  m[0][2], 0, 0);
+			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 0);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
-		case 1: //Rotação angular no proprio eixo
-			ang = 1000; //escolha o angulo
+		case 3: //Rotação angular no proprio eixo
+			ang = 90; //escolha o angulo
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
 			//Serial.print(" Case 1 ");
 			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
-			caminhar(m[0][0], m[0][1],  m[0][2], 6, 1); 
+			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 0); 
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -198,9 +189,9 @@ int formas(int edro)
 			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * 90) / 360; //Volta na posição que iniciou
 			for(int i = 0;i < 6;i++)
 			{	
-				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
-				caminhar(m[i][0], m[i][1],  m[i][2], 0, 0);
-				delay(50);
+				//Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
+				callback = caminhar(m[i][0], m[i][1],  m[i][2], 0, 0);
+				delay(10);
 			}
 				desalocarMatriz(m,6);
 		break;  	
@@ -208,45 +199,37 @@ int formas(int edro)
 			ang = 90; //escolha o angulo
 			m = alocarMatriz(2,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
+			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360; //linha 2Âª comando
 			for(int i = 0;i < 4;i++)
 			{  
 				for(int j = 0;j < 2;j++)
 				{ 
-					Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
-					caminhar(m[j][0], m[j][1],  m[j][2], 0, 0);
-					delay(50);
+					//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
+					callback = caminhar(m[j][0], m[j][1],  m[j][2], 0, 0);
+					delay(10);
 				}
 			}
 			desalocarMatriz(m,2);
 		break;
-		case 6: //Teste 1
-			ang = 90;
+		case 6: //Circulo
+			ang = 1000;
 			m = alocarMatriz(6,3);
-			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360;; //linha 2Âª comando
-			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[3][0] = 1; m[3][1] = -1; m[3][2] = (e_360 * ang) / 360; //linha 1Âª comando
-			m[4][0] = 1; m[4][1] = 1; m[4][2] = (r_360 * 10) / C; //linha 1Âª comando
-			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * (ang * 2)) / 360; //linha 1Âª comando
-			for(int j = 0;j < 6;j++)
-			{  
-				Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
-				caminhar(m[j][0], m[j][1],  m[j][2], 0, 0);
-				delay(50);
-			}
-			desalocarMatriz(m,2);
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360;; //linha 1Âª comando
+			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
+			callback = caminhar(m[0][0], m[0][1], m[0][2], 3, 1);
+			desalocarMatriz(m,1);
 		break;
+		/*
 		case 3://Posicionamentos angulare (Circulo)
 			ang = 30; //escolha o angulo
 			cateto_O = 45;
-			/*
+			/
 				Conteudo: Trigonometria Ângulos notávei SOH CAH TOA
 				Lista estudada:
 					https://youtu.be/TjC3F9sj-x0
 					https://www.youtube.com/watch?v=3iHUX_oOcX0
 					https://www.dobitaobyte.com.br/sirene-com-arduino/
-			*/
+			/
 			m = alocarMatriz(1,3);//6 linhas e 3 colunas
 			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
 			for(int i = 0;i < edro*2;i++)
@@ -257,10 +240,69 @@ int formas(int edro)
 			}
 				desalocarMatriz(m,6);
 		break;
+		*/
 		default :
 		Serial.println("Formato invalido.");  
 	}
-	return 1;    
+	return callback;    
+}
+bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
+{ //0 - Parado, 1 - frente , -1 - tras)
+	//Serial.print(_esq);Serial.print(" - ");Serial.println(_dir);
+	bool flag_esq = true, flag_dir=true;
+	int passoEsq = 3, passoDir = 3;
+	byte binEsq[4]= {B10010000, B11000000, B01100000, B00110000};
+	byte binDir[4]= {B00001100, B00000110, B00000011, B00001001};
+	while (passosCaminhar > 0)
+	{
+		digitalWrite(latchPin, LOW);
+		if(_freqRot > 0)
+		{
+			if(_CW_CCW == 1) 
+			{	
+				//Serial.println(passosCaminhar % _freqRot);
+				(passosCaminhar % _freqRot) != 1 ? flag_esq = false : flag_esq = true;
+			}
+			else if(_CW_CCW == -1)
+			{
+				(passosCaminhar % _freqRot) != 1 ? flag_dir = false : flag_dir = true;
+			}
+		}
+		if(flag_esq)
+		{
+			if (_esq == 1)
+			{
+				if(passoEsq == 3) passoEsq = -1;
+				passoEsq++;
+			}
+			else if (_esq == -1)
+			{
+				if(passoEsq == 0) passoEsq = 4;
+					passoEsq--;
+			}
+		}
+		if(flag_dir)
+		{
+			if (_dir == 1 )
+			{
+				if(passoDir == 3) passoDir = -1;
+				passoDir++;
+			}
+			else if (_dir == -1 )
+			{	
+				if(passoDir == 0) passoDir = 4; 
+				passoDir--;
+			}
+		}
+		//Serial.print(passoEsq);Serial.print(" - ");Serial.println(passoDir);
+		shiftOut(dataPin, clockPin, MSBFIRST, binEsq[passoEsq] | binDir[passoDir]); //envia resultado binÃ¡rio para o shift register
+		digitalWrite(latchPin, HIGH);
+		passosCaminhar--;
+		flag_esq = true;
+		flag_dir= true;
+		delay(5);
+	}
+	return passosCaminhar == 0 ? 0 : 1;
 }
 int leBotao()
 {
@@ -271,7 +313,7 @@ int leBotao()
 	{
 		botao = !botao;
 		option =1;
-		//Serial.println(option);
+		Serial.println(option);
 		//delay(1000);
 	}
 	if ((valorBotao > botao_gravar_parar +10) && (valorBotao < 724 + 5))
@@ -312,141 +354,6 @@ int leBotao()
 	delay(5);
 	return option;
 }
-int caminhar(int _esq, int _dir, int passosCaminhar, int _freqRot, int _CW_CCW)
-{ //0 - Parado, 1 - frente , -1 - tras)
-	//Serial.print(_esq);Serial.print(" - ");Serial.println(_dir);
-	while (passosCaminhar > 0)
-	{
-		digitalWrite(latchPin, LOW);
-		if(_freqRot > 0)
-		{
-			if(_CW_CCW == 1) 
-			{	
-				//Serial.println(passosCaminhar % _freqRot);
-				direction(_esq, passosCaminhar % _freqRot );
-			}
-			else if(_CW_CCW == -1)
-			{
-				direction(-(passosCaminhar % _freqRot == _CW_CCW ), _dir);
-			}
-		}
-		else
-		{
-			direction(_esq, _dir);
-		}
-		shiftOut(dataPin, clockPin, MSBFIRST, binarioEsq | binarioDir); //envia resultado binÃ¡rio para o shift register
-		digitalWrite(latchPin, HIGH);
-		if (passosCaminhar > frenagem) //acelera e freia o passo
-		{
-			passo = round(passo * 0.90); //milissegundos entre cada instruÃ§Ã£o de movimento.
-		}
-		else
-		{
-			passo = passo + 1;
-		}
-		passosCaminhar--;
-		delay(5);
-		//Serial.println(passosCaminhar);
-	}
-	passo = 50;
-	return passosCaminhar == 0 ? 0 : 1;
-}
-void direction(int _esq, int _dir)
-{	
-	bool flag_esq = true, flag_dir=true;
-
-	//em breve refazer essa logica
-	if((_esq > 1) || (_esq == 0)) flag_esq = false;
-	if((_dir > 1) || (_dir == 0)) flag_dir = false;
-	if((_esq < -1) || (_esq == 0)) flag_esq = false;
-	if((_dir < -1) || (_dir == 0)) flag_dir = false;
-
-	if (_esq == 1 && flag_esq)
-	{
-		if(passoEsq == 4) passoEsq = 0;
-		passoEsq++;
-	}
-	else if (_esq == -1 && flag_esq)
-	{
-		if(passoEsq == 1) passoEsq = 5;
-		passoEsq--;
-	}
-	//=========================================
-	if (_dir == 1 && flag_dir)
-	{
-		if(passoDir == 4) passoDir = 0;
-		passoDir++;
-	}
-	else if (_dir == -1 && flag_dir)
-	{	
-		if(passoDir == 1) passoDir = 5; 
-		passoDir--;
-	}
-	//Serial.print(passoDir);Serial.print(" - ");Serial.println(passoEsq);
-	if(flag_esq)
-	{
-		switch (abs(passoEsq))
-		{
-			case 0:
-				//Serial.print(abs(passoEsq));
-				binarioEsq = B00000000;
-			break;
-			case 1:
-				//Serial.print(abs(passoEsq));
-				binarioEsq = B10010000;//144
-			break;
-
-			case 2:
-				//Serial.print(abs(passoEsq));
-				binarioEsq = B11000000;//192
-			break;
-
-			case 3:
-				//Serial.print(abs(passoEsq));
-				binarioEsq = B01100000;//96
-			break;
-
-			case 4:
-				//Serial.print(abs(passoEsq));
-				binarioEsq = B00110000;//48
-			break;
-			default: return;
-		}
-	}
-	if(flag_dir)
-	{
-		switch (abs(passoDir))
-		{
-			case 1:
-				//Serial.println(abs(passoDir));
-				binarioDir = B00001100;//12
-			break;
-
-			case 2:
-				//Serial.println(abs(passoDir));
-				binarioDir = B00000110;//6
-			break;
-
-			case 3:
-				//Serial.println(abs(passoDir));
-				binarioDir = B00000011;//3
-			break;
-
-			case 4:
-				//Serial.println(abs(passoDir));
-				binarioDir = B00001001; //9
-			break;
-			case 0:
-				//Serial.println(abs(passoDir));
-				binarioDir = B00000000; 
-			break;
-			default: return;
-		}
-	}
-	flag_esq = true;
-	flag_dir= true;
-}
-
 //Ref.: https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
 int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
 {  
