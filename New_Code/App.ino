@@ -63,6 +63,7 @@ const float m_erro_e = 0.075; //45
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Include de libs
+#include <SPI.h>
 #include <deprecated.h>
 #include <MFRC522.h>
 #include <MFRC522Extended.h>
@@ -83,6 +84,7 @@ const int miso =  12;
 const int mosi =  11;
 const int RST_PIN = 9;
 const int SS_PIN  = 10;
+short int amount_Tag = 0;
 //=========================================================================================
 //Função Loop
 const int timer_B = 300;  //Timer Botão
@@ -109,18 +111,24 @@ unsigned long millisAnterior3 = 0;
 unsigned long millisAtual3 = 0;  
 //=========================================================================================
 //Instanciação de Objetos RFID
-MFRC522 mfrc522(SS_PIN, RST_PIN);
-MFRC522::MIFARE_Key key;
-MFRC522::StatusCode status; 
-byte buffer[18];  //data transfer buffer (16+2 bytes data+CRC)
+MFRC522 mfrc522(SS_PIN, RST_PIN);//Create MFRC522 instance
+//MFRC522::MIFARE_Key key;//objeto da instancia
+MFRC522::StatusCode status;//variable to get card status 
+byte buffer[18]; //data transfer buffer (16+2 bytes data+CRC)
 byte size = sizeof(buffer);
 uint8_t pageAddr = 0x06;
+//In this example we will write/read 16 bytes (page 6,7,8 and 9).
+//Ultraligth mem = 16 pages. 4 bytes per page.  
+//Pages 0 to 4 are for special functions. 
 
 void setup()
 { 	
 	SPI.begin();
 	mfrc522.PCD_Init();
 	Serial.begin(9600);
+	memcpy(buffer,"X0000000",((sizeof(buffer)-2)/2));//X para sinalizar inicio de comandos
+	Serial.write(char(buffer[0]));
+	Serial.println();
 	//===================================================================================================
 	Serial.print(F("Passos para a RODA rodar (r_360): "));  Serial.println(r_360);
 	Serial.print(F("Distancia pecorrida pela RODA (C): ")); Serial.println(C);
@@ -137,9 +145,9 @@ void setup()
 }
 
 void loop()
-{
-	static int option;
-	bool callback_loop = false;	
+{	
+	static int option = 0;
+	static bool callback_button = false, callback_read_f = false, callback_end = false;	
 	//===================================================================================================
 	//Função Execute Formas Geometricas
 	//===================================================================================================
@@ -168,33 +176,69 @@ void loop()
 		{
 			if(option == 1)
 			{
-				//leRfid();
-				botao = !botao;
-				option = 0;
+				while(!callback_read_f)	
+				{
+					callback_read_f = leRfid();
+				}	
+				switch(char(buffer[0]) != 'X')
+				{
+					case 'S': Serial.write(buffer[0]);
+					break;
+				}
+				/*if(buffer[0] == 'E')//End
+				{
+					botao = !botao;
+					option = 0;
+					callback_end = true;
+				}*/
 			} 
 		}
 	}
 	//===================================================================================================
 	//Função ler Botão
 	//===================================================================================================
-	if(!callback_loop)
+	millisAtual3 = millis();
+	if (millisAtual3 - millisAnterior3 >= timer_B)
 	{
-		millisAtual3 = millis();
 		if (millisAtual3 - millisAnterior3 >= timer_B)
 		{
 			millisAnterior3 = millisAtual3;
 			option = leBotao();
-			callback_loop = true;
 		}
 	}
-	else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
+	//else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
 	//===================================================================================================
 	//===================================================================================================
 	
 }
-void leRfid()
+bool leRfid()
 {
-
+	short int tam=((sizeof(buffer)-2)/2);
+	//Serial.print(tam);
+	if ( ! mfrc522.PICC_IsNewCardPresent())
+	return;
+	if ( ! mfrc522.PICC_ReadCardSerial())
+    return;
+	//Serial.println(F("Reading data ... "));
+    //data in 4 block is readed at once.
+    status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(0x06, buffer, &size);
+    if (status != MFRC522::STATUS_OK)
+    {
+        Serial.print(F("MIFARE_Read() failed: "));
+        //Serial.println(mfrc522.GetStatusCodeName(status));
+        return false;
+    }
+	//Serial.print(F("Readed data: "));
+	//Dump a byte array to Serial
+	for (byte i = 0; i < tam; i++)
+	{
+    	Serial.write(buffer[i]);
+	}
+	Serial.write(char(buffer[0]));
+	Serial.println();
+	mfrc522.PICC_HaltA();
+	amount_Tag++;
+	return true;
 }
 bool formas(int edro)
 {   
