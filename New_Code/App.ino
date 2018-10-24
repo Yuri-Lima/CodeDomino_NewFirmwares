@@ -1,10 +1,12 @@
 //Programa : Code Dominó
 //Autor : Daniel Chagas / Patrick / Yuri Lima
 /*
+	Fontes de estudos
 	Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o do codigo.
 	Nova roda 3D https://www.thingiverse.com/thing:862438/files
 	https://wakatime.com/projects
 	https://youtu.be/B86nqDRskVU - Mecanismo de redução do motor
+	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ -RFID
 */
 //==================================================================================================================
 /*
@@ -60,80 +62,139 @@ float revol_ = C_ / C;//C" / C'
 const float m_erro_e = 0.075; //45
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
-/*
+//Include de libs
 #include <deprecated.h>
 #include <MFRC522.h>
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
 #include <Ultrasonic.h>
-*/
+//=========================================================================================
+//Valor de cada botão
+#define Bot_D 709
+#define Bot_E 761
+#define Bot_C 822
+#define Bot_A 894
+#define Bot_N 977
+#define Bot_O 1018
+//=========================================================================================
+//Função RFID
+const int sck  =  13; 
+const int miso =  12;
+const int mosi =  11;
+const int RST_PIN = 9;
+const int SS_PIN  = 10;
+//=========================================================================================
+//Função Loop
+const int timer_B = 300;  //Timer Botão
+const int timer_F = 400; //Timer Formas Geometricas
+const int timer_R = 1000; //Timer RFID
+//=========================================================================================
+//Função Caminhar
+const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
+const int clockPin = 7; //Pin connected to SH_CP of 74HC595
+const int dataPin = 6; //Pin connected to DS of 74HC595
+//=========================================================================================
+//Função Lerbotao e loop
+bool botao = false;
+//=========================================================================================
+//Função alocarMatriz e desalocarMatriz
+int **m;//Matriz bidimensional
 //=========================================================================================
 //Função Loop
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 unsigned long millisAnterior2 = 0;
-unsigned long millisAtual2 = 0; 
+unsigned long millisAtual2 = 0;
+unsigned long millisAnterior3 = 0;
+unsigned long millisAtual3 = 0;  
 //=========================================================================================
-//Função Loop
-const int timer = 300;
-//=========================================================================================
-//Função Caminhar
-const int latchPin = 8; //Pin connected to ST_CP of 74HC595
-const int clockPin = 7; //Pin connected to SH_CP of 74HC595
-const int dataPin = 6; ////Pin connected to DS of 74HC595
-//=========================================================================================
-//Função Lerbotao e loop
-bool botao = false;
-#define botao_gravar_parar 709
-//=========================================================================================
-//Função alocarMatriz e desalocarMatriz
-int **m;//Matriz bidimensional
+//Instanciação de Objetos RFID
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+MFRC522::MIFARE_Key key;
+MFRC522::StatusCode status; 
+byte buffer[18];  //data transfer buffer (16+2 bytes data+CRC)
+byte size = sizeof(buffer);
+uint8_t pageAddr = 0x06;
 
 void setup()
-{ 
+{ 	
+	SPI.begin();
+	mfrc522.PCD_Init();
 	Serial.begin(9600);
-	//=========================================================================================
+	//===================================================================================================
 	Serial.print(F("Passos para a RODA rodar (r_360): "));  Serial.println(r_360);
 	Serial.print(F("Distancia pecorrida pela RODA (C): ")); Serial.println(C);
 	Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (C_): "));    Serial.println(C_);
 	Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO (revol_): "));   Serial.println(revol_);
 	Serial.print(F("Quantos passos para o CARRO rodar no EIXO (e_360): "));   Serial.println(e_360);
-	//=========================================================================================
+	//===================================================================================================
 	pinMode(latchPin, OUTPUT);
 	pinMode(clockPin, OUTPUT);
 	pinMode(dataPin, OUTPUT);
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
+	digitalWrite(latchPin, HIGH);
 }
 
 void loop()
 {
 	static int option;
-	bool callback_loop = false;
+	bool callback_loop = false;	
+	//===================================================================================================
+	//Função Execute Formas Geometricas
+	//===================================================================================================
 	millisAtual = millis();
-	//A cada tempo do passo, execute
-	if (millisAtual - millisAnterior >= timer)
+	if (millisAtual - millisAnterior >= timer_F)
 	{
 		millisAnterior = millisAtual;
 		if (botao)
 		{ 
-			delay(1000);
+		/*	
+			delay(1500);
 			callback_loop = formas(option);
 			botao = !botao;
 			option = 0;
+		*/
+		}
+	}	
+	//===================================================================================================
+	//Função Execute Instruções de leitura RFID
+	//===================================================================================================
+	millisAtual2 = millis();
+	if (millisAtual2 - millisAnterior2 >= timer_R)
+	{
+		millisAnterior2 = millisAtual2;
+		if (botao)
+		{
+			if(option == 1)
+			{
+				//leRfid();
+				botao = !botao;
+				option = 0;
+			} 
 		}
 	}
+	//===================================================================================================
+	//Função ler Botão
+	//===================================================================================================
 	if(!callback_loop)
 	{
-		millisAtual2 = millis();
-		if (millisAtual2 - millisAnterior2 >= timer)
+		millisAtual3 = millis();
+		if (millisAtual3 - millisAnterior3 >= timer_B)
 		{
-			millisAnterior2 = millisAtual2;
+			millisAnterior3 = millisAtual3;
 			option = leBotao();
+			callback_loop = true;
 		}
 	}
 	else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
+	//===================================================================================================
+	//===================================================================================================
 	
+}
+void leRfid()
+{
+
 }
 bool formas(int edro)
 {   
@@ -247,12 +308,14 @@ bool formas(int edro)
 	return callback;    
 }
 bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
-{ //0 - Parado, 1 - frente , -1 - tras)
+{ 	 //0 - Parado, 1 - frente , -1 - tras)
 	//Serial.print(_esq);Serial.print(" - ");Serial.println(_dir);
-	bool flag_esq = true, flag_dir=true;
-	int passoEsq = 3, passoDir = 3;
-	byte binEsq[4]= {B10010000, B11000000, B01100000, B00110000};
-	byte binDir[4]= {B00001100, B00000110, B00000011, B00001001};
+	bool flag_esq = true, flag_dir=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
+	int passoEsq = 3, passoDir = 3;//Faz o fluxo step binario 
+	byte binEsq[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
+	byte binDir[4]= {B00001100, B00000110, B00000011, B00001001};//FullStep
+	if(_dir == 0) flag_dir = false;//Stop
+	if(_esq == 0) flag_esq = false;//Stop
 	while (passosCaminhar > 0)
 	{
 		digitalWrite(latchPin, LOW);
@@ -306,45 +369,45 @@ bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 }
 int leBotao()
 {
-	short int option, valorBotao = 0;
-	valorBotao = analogRead(A0);
-	//Serial.println(valorBotao);
-	if ((valorBotao > 100) && (valorBotao < botao_gravar_parar))
+	short int option, value = 0;
+	value = analogRead(A0);
+	//Serial.println(value);
+	if ((value > 100) && (value < Bot_D))
 	{
 		botao = !botao;
 		option =1;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((valorBotao > botao_gravar_parar +10) && (valorBotao < 724 + 5))
+	if ((value > Bot_D + 10) && (value < Bot_E + 5))
 	{
 		botao = !botao;
 		option =2;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((valorBotao > 724 + 10) && (valorBotao < 780 +5))
+	if ((value > Bot_E + 10) && (value <Bot_C + 5))
 	{
 		botao = !botao;
 		option =3;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((valorBotao > 780 + 10) && (valorBotao < 847 +5))
+	if ((value > Bot_C + 10) && (value < Bot_A + 5))
 	{
 		botao = !botao;
 		option =4;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((valorBotao > 847 + 10) && (valorBotao < 924 +5))
+	if ((value > Bot_A + 10) && (value < Bot_N + 5))
 	{
 		botao = !botao;
 		option =5;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((valorBotao > 924 + 10) && (valorBotao < 1018 +5))
+	if ((value > Bot_N + 10) && (value < Bot_O + 5))
 	{
 		botao = !botao;
 		option =6;
