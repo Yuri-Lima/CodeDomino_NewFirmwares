@@ -48,18 +48,18 @@ const float m_erro_r = 1.05;
 float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
-const float raioRoda =  3.275;
+const float raioRoda =  3.3;
 float C = (2 * PI * raioRoda); //C"
 
 //Etapa 3 - Carro
-const float raioEixo = 4.285; 
+const float raioEixo = 4.5; 
 float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
 float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.075; //45
+const float m_erro_e = 0.045; 
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Include de libs
@@ -76,7 +76,7 @@ int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #define Bot_C 822
 #define Bot_A 894
 #define Bot_N 977
-#define Bot_O 1018
+#define Bot_O 1050
 //=========================================================================================
 //Função RFID
 const int sck  =  13; 
@@ -89,7 +89,7 @@ short int amount_Tag = 0;
 //Função Loop
 const int timer_B = 300;  //Timer Botão
 const int timer_F = 400; //Timer Formas Geometricas
-const int timer_R = 1000; //Timer RFID
+const int timer_R = 500; //Timer RFID
 //=========================================================================================
 //Função Caminhar
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
@@ -156,41 +156,51 @@ void loop()
 	{
 		millisAnterior = millisAtual;
 		if (botao)
-		{ 
-		/*	
+		{ 	
 			delay(1500);
-			callback_loop = formas(option);
+			callback_end = formas(option);
 			botao = !botao;
 			option = 0;
-		*/
 		}
 	}	
 	//===================================================================================================
 	//Função Execute Instruções de leitura RFID
 	//===================================================================================================
-	millisAtual2 = millis();
-	if (millisAtual2 - millisAnterior2 >= timer_R)
+	if (millisAtual % timer_R == 0)
 	{
-		millisAnterior2 = millisAtual2;
 		if (botao)
 		{
 			if(option == 1)
 			{
 				while(!callback_read_f)	
 				{
-					callback_read_f = leRfid();
+					callback_read_f = read_rfid();
 				}	
-				switch(char(buffer[0]) != 'X')
+				switch(char(buffer[0]))
 				{
-					case 'S': Serial.write(buffer[0]);
+					case 'S': 
+						Serial.write(buffer[0]);
+						//anda 10cm
+						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
+						callback_read_f =false;
+					break;
+					case 'F': 
+						Serial.write(buffer[0]);
+						//anda 10cm
+						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
+						callback_read_f =false;
+					break;
+					case 'E': 
+						Serial.write(buffer[0]);
+						caminhar(0, 0,  0, 0, 1);
+						callback_read_f =false;
+						botao = !botao;
+						Serial.print("Fim");
+					break;
+					default:
+						Serial.print("default");
 					break;
 				}
-				/*if(buffer[0] == 'E')//End
-				{
-					botao = !botao;
-					option = 0;
-					callback_end = true;
-				}*/
 			} 
 		}
 	}
@@ -198,44 +208,32 @@ void loop()
 	//Função ler Botão
 	//===================================================================================================
 	millisAtual3 = millis();
-	if (millisAtual3 - millisAnterior3 >= timer_B)
+	if (millisAtual % timer_B ==0)
 	{
-		if (millisAtual3 - millisAnterior3 >= timer_B)
-		{
-			millisAnterior3 = millisAtual3;
-			option = leBotao();
-		}
+		millisAnterior3 = millisAtual3;
+		option = leBotao();
+		//delay(1000);
 	}
 	//else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
 	//===================================================================================================
 	//===================================================================================================
 	
 }
-bool leRfid()
+bool read_rfid()
 {
 	short int tam=((sizeof(buffer)-2)/2);
 	//Serial.print(tam);
-	if ( ! mfrc522.PICC_IsNewCardPresent())
-	return;
-	if ( ! mfrc522.PICC_ReadCardSerial())
-    return;
-	//Serial.println(F("Reading data ... "));
+	if ( ! mfrc522.PICC_IsNewCardPresent())	return false;
+	if ( ! mfrc522.PICC_ReadCardSerial()) return false;
+	Serial.println(F("Reading data ... "));
     //data in 4 block is readed at once.
-    status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(0x06, buffer, &size);
+    status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(pageAddr, buffer, &size);
     if (status != MFRC522::STATUS_OK)
     {
-        Serial.print(F("MIFARE_Read() failed: "));
+        //Serial.print(F("MIFARE_Read() failed: "));
         //Serial.println(mfrc522.GetStatusCodeName(status));
         return false;
     }
-	//Serial.print(F("Readed data: "));
-	//Dump a byte array to Serial
-	for (byte i = 0; i < tam; i++)
-	{
-    	Serial.write(buffer[i]);
-	}
-	Serial.write(char(buffer[0]));
-	Serial.println();
 	mfrc522.PICC_HaltA();
 	amount_Tag++;
 	return true;
@@ -247,7 +245,7 @@ bool formas(int edro)
 	bool callback;
 	switch(edro)
 	{
-		case 1: //Rotação no eixo
+		case 9: //Rotação no eixo
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
@@ -415,7 +413,7 @@ int leBotao()
 {
 	short int option, value = 0;
 	value = analogRead(A0);
-	//Serial.println(value);
+	Serial.println(value);
 	if ((value > 100) && (value < Bot_D))
 	{
 		botao = !botao;
@@ -423,35 +421,35 @@ int leBotao()
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((value > Bot_D + 10) && (value < Bot_E + 5))
+	if ((value > Bot_D ) && (value < Bot_E + 5))
 	{
 		botao = !botao;
 		option =2;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((value > Bot_E + 10) && (value <Bot_C + 5))
+	if ((value > Bot_E ) && (value <Bot_C + 5))
 	{
 		botao = !botao;
 		option =3;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((value > Bot_C + 10) && (value < Bot_A + 5))
+	if ((value > Bot_C ) && (value < Bot_A + 5))
 	{
 		botao = !botao;
 		option =4;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((value > Bot_A + 10) && (value < Bot_N + 5))
+	if ((value > Bot_A) && (value < Bot_N + 5))
 	{
 		botao = !botao;
 		option =5;
 		Serial.println(option);
 		//delay(1000);
 	}
-	if ((value > Bot_N + 10) && (value < Bot_O + 5))
+	if ((value > Bot_N ) && (value < Bot_O + 5))
 	{
 		botao = !botao;
 		option =6;
