@@ -65,7 +65,7 @@ int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //Include de libs
 #include <SPI.h>
 #include <deprecated.h>
-#include <MFRC522.h>
+#include <MFRC522.h>//Version 1.3.6
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
 #include <Ultrasonic.h>
