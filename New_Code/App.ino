@@ -52,14 +52,14 @@ const float raioRoda =  3.3;
 float C = (2 * PI * raioRoda); //C"
 
 //Etapa 3 - Carro
-const float raioEixo = 4.5; 
+const float raioEixo = 4.2; 
 float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
 float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.045; 
+const float m_erro_e = 0.043; 
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Include de libs
@@ -87,7 +87,7 @@ const int SS_PIN  = 10;
 short int amount_Tag = 0;
 //=========================================================================================
 //Função Loop
-const int timer_B = 300;  //Timer Botão
+const int timer_B = 400;  //Timer Botão
 const int timer_F = 400; //Timer Formas Geometricas
 const int timer_R = 500; //Timer RFID
 //=========================================================================================
@@ -155,7 +155,7 @@ void loop()
 	if (millisAtual - millisAnterior >= timer_F)
 	{
 		millisAnterior = millisAtual;
-		if (botao)
+		if (botao && (option != 1))
 		{ 	
 			delay(1500);
 			callback_end = formas(option);
@@ -184,7 +184,8 @@ void loop()
 						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
 						callback_read_f =false;
 					break;
-					case 'F': 
+					case 'F':
+						//m = alocarMatriz(1,1); 
 						Serial.write(buffer[0]);
 						//anda 10cm
 						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
@@ -413,7 +414,7 @@ int leBotao()
 {
 	short int option, value = 0;
 	value = analogRead(A0);
-	Serial.println(value);
+	//Serial.println(value);
 	if ((value > 100) && (value < Bot_D))
 	{
 		botao = !botao;
