@@ -52,14 +52,14 @@ const float raioRoda =  3.3;
 float C = (2 * PI * raioRoda); //C"
 
 //Etapa 3 - Carro
-const float raioEixo = 4.2; 
+const float raioEixo = 4.1; 
 float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
 float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.043; 
+const float m_erro_e = 0.045; 
 int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Include de libs
@@ -69,6 +69,9 @@ int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
 #include <Ultrasonic.h>
+//=========================================================================================
+//Função Som
+const int buzzer = 3;
 //=========================================================================================
 //Valor de cada botão
 #define Bot_D 709
@@ -87,7 +90,7 @@ const int SS_PIN  = 10;
 short int amount_Tag = 0;
 //=========================================================================================
 //Função Loop
-const int timer_B = 400;  //Timer Botão
+const int timer_B = 100;  //Timer Botão
 const int timer_F = 400; //Timer Formas Geometricas
 const int timer_R = 500; //Timer RFID
 //=========================================================================================
@@ -142,25 +145,28 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
+	bipe();
+	//somInicio();
 }
 
 void loop()
 {	
 	static int option = 0;
-	static bool callback_button = false, callback_read_f = false, callback_end = false;	
+	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true;	
 	//===================================================================================================
 	//Função Execute Formas Geometricas
 	//===================================================================================================
 	millisAtual = millis();
-	if (millisAtual - millisAnterior >= timer_F)
+	if (millisAtual % timer_F == 0 )
 	{
-		millisAnterior = millisAtual;
-		if (botao && (option != 1))
+		if ((option != 0) && (option != 1))
 		{ 	
 			delay(1500);
-			callback_end = formas(option);
-			botao = !botao;
-			option = 0;
+			formas(option);
+			flag_button = true;
+			bipeFino();
+			bipeFino();
+			//somFimExecucao();		
 		}
 	}	
 	//===================================================================================================
@@ -168,52 +174,53 @@ void loop()
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
-		if (botao)
+		if(option == 1)
 		{
-			if(option == 1)
+			while(!callback_read_f)	
 			{
-				while(!callback_read_f)	
-				{
-					callback_read_f = read_rfid();
-				}	
-				switch(char(buffer[0]))
-				{
-					case 'S': 
-						Serial.write(buffer[0]);
-						//anda 10cm
-						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
-						callback_read_f =false;
-					break;
-					case 'F':
-						//m = alocarMatriz(1,1); 
-						Serial.write(buffer[0]);
-						//anda 10cm
-						caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
-						callback_read_f =false;
-					break;
-					case 'E': 
-						Serial.write(buffer[0]);
-						caminhar(0, 0,  0, 0, 1);
-						callback_read_f =false;
-						botao = !botao;
-						Serial.print("Fim");
-					break;
-					default:
-						Serial.print("default");
-					break;
-				}
-			} 
-		}
+				callback_read_f = read_rfid();
+			}	
+			switch(char(buffer[0]))
+			{
+				case 'S': 
+					Serial.write(buffer[0]);
+					//anda 10cm
+					caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
+					callback_read_f =false;
+				break;
+				case 'F':
+					//m = alocarMatriz(1,1); 
+					Serial.write(buffer[0]);
+					//anda 10cm
+					caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
+					callback_read_f =false;
+				break;
+				case 'E': 
+					Serial.write(buffer[0]);
+					caminhar(0, 0,  0, 0, 1);
+					callback_read_f =false;
+					botao = !botao;
+					Serial.print("Fim");
+				break;
+				default:
+					Serial.print("default");
+				break;
+			}
+		} 
+		
 	}
 	//===================================================================================================
 	//Função ler Botão
 	//===================================================================================================
-	millisAtual3 = millis();
-	if (millisAtual % timer_B ==0)
+	if (millisAtual % timer_B == 0)
 	{
-		millisAnterior3 = millisAtual3;
-		option = leBotao();
-		//delay(1000);
+		if(flag_button) option = leBotao();
+		if(option != 0)	
+		{
+			flag_button = false;
+			Serial.println(option);
+		}
+		delay(2);
 	}
 	//else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
 	//===================================================================================================
@@ -242,8 +249,8 @@ bool read_rfid()
 bool formas(int edro)
 {   
 	// int p = convertAngulo(45);
-	float ang, dist, cateto_O;
-	bool callback;
+	float ang, dist, cateto_O, razao;
+	bool callback = false;
 	switch(edro)
 	{
 		case 9: //Rotação no eixo
@@ -316,11 +323,12 @@ bool formas(int edro)
 			desalocarMatriz(m,2);
 		break;
 		case 6: //Circulo
-			ang = 1000;
+			//razao = 3;
+			ang = 880; // 870 para razao de 6
 			m = alocarMatriz(6,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360;; //linha 1Âª comando
 			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
-			callback = caminhar(m[0][0], m[0][1], m[0][2], 3, 1);
+			callback = caminhar(m[0][0], m[0][1], m[0][2], 6, 1);
 			desalocarMatriz(m,1);
 		break;
 		/*
@@ -386,7 +394,9 @@ bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 				if(passoEsq == 0) passoEsq = 4;
 					passoEsq--;
 			}
+			//Serial.print("Ligou esquerda: ");Serial.print(passoEsq);Serial.print(" - ");Serial.println("0");
 		}
+		
 		if(flag_dir)
 		{
 			if (_dir == 1 )
@@ -399,64 +409,67 @@ bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 				if(passoDir == 0) passoDir = 4; 
 				passoDir--;
 			}
+			//Serial.print("Ligou direita: ");Serial.print("0");Serial.print(" - ");Serial.println(passoDir);
 		}
-		//Serial.print(passoEsq);Serial.print(" - ");Serial.println(passoDir);
 		shiftOut(dataPin, clockPin, MSBFIRST, binEsq[passoEsq] | binDir[passoDir]); //envia resultado binÃ¡rio para o shift register
 		digitalWrite(latchPin, HIGH);
 		passosCaminhar--;
 		flag_esq = true;
 		flag_dir= true;
-		delay(5);
+		delay(2);
 	}
-	return passosCaminhar == 0 ? 0 : 1;
+	return passosCaminhar == 0 ? 1 : 0;
 }
 int leBotao()
 {
-	short int option, value = 0;
+	short int option, value = 0, sample = 5;
+	//for(byte s = 0; s < sample; s++) 
 	value = analogRead(A0);
+	//value = value / sample;
 	//Serial.println(value);
 	if ((value > 100) && (value < Bot_D))
 	{
-		botao = !botao;
-		option =1;
-		Serial.println(option);
+		option = 1;
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
-	if ((value > Bot_D ) && (value < Bot_E + 5))
+	else if ((value > Bot_D ) && (value < Bot_E + 5))
 	{
-		botao = !botao;
 		option =2;
-		Serial.println(option);
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
-	if ((value > Bot_E ) && (value <Bot_C + 5))
+	else if ((value > Bot_E ) && (value <Bot_C + 5))
 	{
-		botao = !botao;
-		option =3;
-		Serial.println(option);
+		option = 3;
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
-	if ((value > Bot_C ) && (value < Bot_A + 5))
+	else if ((value > Bot_C ) && (value < Bot_A + 5))
 	{
-		botao = !botao;
-		option =4;
-		Serial.println(option);
+		option = 4;
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
-	if ((value > Bot_A) && (value < Bot_N + 5))
+	else if ((value > Bot_A ) && (value < Bot_N + 5))
 	{
-		botao = !botao;
-		option =5;
-		Serial.println(option);
+		option = 5;
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
-	if ((value > Bot_N ) && (value < Bot_O + 5))
+	else if ((value > Bot_N ) && (value < Bot_O + 5))
 	{
-		botao = !botao;
-		option =6;
-		Serial.println(option);
+		option = 6;
+		//Serial.println(option);
+		bipeFino();
 		//delay(1000);
 	}
+	else if (value < 100) option = 0;
 	delay(5);
 	return option;
 }
@@ -499,3 +512,89 @@ int convertAngulo(float _angulo)
 {  
 	return int((e_360 * _angulo) / 360);
 }
+//=====================================================================
+// Funções da Biblioteca Som
+void somInicio()
+{
+  for( short int i=400;i<1000;i++)
+  {
+    tone(buzzer, i, 3);
+    delay(3);
+  }
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1000, 50);
+  delay(50);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1000, 50);
+  delay(50);
+  noTone(buzzer);
+}
+void erro()
+{
+  tone(buzzer, 391, 800);
+  delay(150);
+  noTone(buzzer);
+  delay(30);
+  tone(buzzer, 261, 1500);
+  delay(400);
+  noTone(buzzer);
+}
+void bipe()
+{
+  tone(buzzer, 391, 100);
+  delay(100);
+  noTone(buzzer);
+}
+void bipeFino()
+{
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+}
+void somAfirmativo()
+{
+  tone(buzzer, 440, 200);
+  delay(200);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 494, 200);
+  delay(200);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 523, 400);
+  delay(400);
+  noTone(buzzer);
+}
+void somFimExecucao()
+{
+  tone(buzzer, 440, 50);
+  delay(50);
+  tone(buzzer, 494, 50);
+  delay(50);
+  tone(buzzer, 523, 400);
+  delay(400);
+  tone(buzzer, 494, 50);
+  delay(50);
+  tone(buzzer, 440, 50);
+  delay(50);
+  tone(buzzer, 391, 400);
+  delay(400);
+  noTone(buzzer);
+}
+void somGravando()
+{
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+  delay(100);
+  tone(buzzer, 1047, 30);
+  delay(30);
+  noTone(buzzer);
+}
+//=====================================================================
