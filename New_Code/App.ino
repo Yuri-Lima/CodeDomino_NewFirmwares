@@ -10,6 +10,19 @@
 */
 //==================================================================================================================
 /*
+	Consumo do CodeDomino
+		De acordo com os testes realizados até o dia 25/10/2018 as 23:07, o consumo apresentado é de ~95mA parado,
+		ou seja, esperando receber alguma comando.
+		Após receber comandos, seu consumo varia a depender a executação das bobinas, no geral, podemos dizer que
+		o consumo minimo em funcionamento é de 495mA e maximo de 700mA que ocorre ao final de percusso, uma especie
+		de pico, mais posterior é realizar o desligamento das bobinas, voltando ao seu consumo base de ~95mA.
+		Portando uma bateria Lipo 2S de 1300mAh tem uma autonomia de acordo com teste realizados de aproximadamente
+		4 horas de atividades. 
+		O.B.S.: Esse periodo de consumo ainda terá que sermais bem avaliado, pois essa informações é apenas uma ideia,
+		levando em consideração as experiencias que tivier no dercorrer atual dos testes.
+*/
+//==================================================================================================================
+/*
 	--> Possiveis questionamentos <--
 	(Quantos passos para a roda fazer 360º?) --> Etapa 2
 	((Quantos passos para o CARRO fazer 360º?)) --> Etapa 4
@@ -41,7 +54,7 @@
 
 	Detalhes importantes, tudo que for relacionado a movimentos de curva usamos e_360 e em linha reta r_360.
 */
-//=====================================================================================================
+//==================================================================================================================
 //Etapa 1 - Motor
 const float GrausPassoDoMotor = 0.1757;
 const float m_erro_r = 1.05;
@@ -72,6 +85,14 @@ int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=========================================================================================
 //Função Som
 const int buzzer = 3;
+//=========================================================================================
+//Valor das peças para orientação
+#define Start 'S'
+#define End  'E'
+#define Fornt  'F'
+#define Back  'B'
+#define Left 'L'
+#define Right 'R'
 //=========================================================================================
 //Valor de cada botão
 #define Bot_D 709
@@ -108,10 +129,6 @@ int **m;//Matriz bidimensional
 //Função Loop
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
-unsigned long millisAnterior2 = 0;
-unsigned long millisAtual2 = 0;
-unsigned long millisAnterior3 = 0;
-unsigned long millisAtual3 = 0;  
 //=========================================================================================
 //Instanciação de Objetos RFID
 MFRC522 mfrc522(SS_PIN, RST_PIN);//Create MFRC522 instance
@@ -151,8 +168,8 @@ void setup()
 
 void loop()
 {	
-	static int option = 0;
-	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true;	
+	static int option = 0, dist = 4, linha = 0, coluna = 0;
+	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true, mat = false;	
 	//===================================================================================================
 	//Função Execute Formas Geometricas
 	//===================================================================================================
@@ -165,7 +182,6 @@ void loop()
 			formas(option);
 			flag_button = true;
 			bipeFino();
-			bipeFino();
 			//somFimExecucao();		
 		}
 	}	
@@ -174,41 +190,74 @@ void loop()
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
-		if(option == 1)
+		if((option != 0) && (option == 1))
 		{
+			m = alocarMatriz(3,3);//FAÇO ALOCAÇÃO
+			/*
+			m[0,0] = S; m[0,1] = F; m[0,2] = L;
+			m[1,0] = F; m[1,1] = R; m[1,2] = F;
+			m[2,0] = F; m[2,1] = R; m[2,2] = F;
+			*/
 			while(!callback_read_f)	
 			{
 				callback_read_f = read_rfid();
-			}	
-			switch(char(buffer[0]))
+			}
+			if(callback_read_f)	
 			{
-				case 'S': 
-					Serial.write(buffer[0]);
-					//anda 10cm
-					caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
+				if( (char(buffer[0]) == Start) || (char(buffer[0]) == Fornt) || (char(buffer[0]) == Back)  || (char(buffer[0]) == Left) || (char(buffer[0]) == Right) )
+				{	
+					m[linha,coluna] = buffer[0];
+					Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
+					caminhar(1, 1,  (r_360 * 3) / C, 0, 1);
 					callback_read_f =false;
-				break;
-				case 'F':
-					//m = alocarMatriz(1,1); 
-					Serial.write(buffer[0]);
-					//anda 10cm
-					caminhar(1, 1,  (r_360 * 4) / C, 0, 1);
-					callback_read_f =false;
-				break;
-				case 'E': 
-					Serial.write(buffer[0]);
+					coluna++;
+					if(coluna > 2)
+					{
+						coluna = 0;
+						linha++;	
+					}
+					if(linha > 3)
+					{
+						linha = 0;
+						coluna = 0;	
+					}						
+				}
+				else if((char(buffer[0]) == End ))
+				{	
+					Serial.print(char(m[0,0]));Serial.print(" - ");Serial.print(char(m[0,1]));Serial.print(" - ");Serial.println(char(m[0,2]));
+					Serial.print(char(m[1,0]));Serial.print(" - ");Serial.print(char(m[1,1]));Serial.print(" - ");Serial.println(char(m[1,2]));
+					Serial.print(char(m[2,0]));Serial.print(" - ");Serial.print(char(m[2,1]));Serial.print(" - ");Serial.println(char(m[2,2]));
+
 					caminhar(0, 0,  0, 0, 1);
 					callback_read_f =false;
-					botao = !botao;
-					Serial.print("Fim");
-				break;
-				default:
-					Serial.print("default");
-				break;
+					flag_button = true;
+					for (int i = 0; i < 3; i++)//Percorre as linhas do Vetor de Ponteiros
+					{  
+						for (int j = 0; j < 3; j++)//Percorre o Vetor de Inteiros atual.
+						{ 
+							Serial.print(m[i][j]); //Inicializa com 0.
+							j < 3 ? Serial.println() : Serial.print(" - "); 
+						}
+					}
+					mat = true;
+					
+			
+				}
 			}
+
+			
 		} 
 		
 	}
+		if(mat)
+		{
+			desalocarMatriz(m, 3);
+			Serial.println("Descolado"); 
+			mat = false;
+		}
+		
+	
+	
 	//===================================================================================================
 	//Função ler Botão
 	//===================================================================================================
@@ -218,7 +267,7 @@ void loop()
 		if(option != 0)	
 		{
 			flag_button = false;
-			Serial.println(option);
+			//Serial.println(option);
 		}
 		delay(2);
 	}
@@ -323,7 +372,7 @@ bool formas(int edro)
 		break;
 		case 6: //Circulo
 			//razao = 3;
-			ang = 880; // 870 para razao de 6
+			ang = 440; // 870 para razao de 6
 			m = alocarMatriz(6,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando
 			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
@@ -417,6 +466,10 @@ bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
 		flag_dir= true;
 		delay(2);
 	}
+	//Desabilitar bobina para economia de energia
+	digitalWrite(latchPin, LOW);
+	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
+	digitalWrite(latchPin, HIGH);
 	return passosCaminhar == 0 ? 1 : 0;
 }
 int leBotao()
@@ -480,6 +533,7 @@ int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colu
 	if(m==NULL)
 	{
 		Serial.println("Erro de alocacao em linha");
+		erro();
 		return 0;
 	}
 	for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
@@ -488,6 +542,7 @@ int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colu
 		if(m[i]==NULL)
 		{
 			Serial.println("Erro de alicacao em coluna");
+			erro();
 			return 0;
 		}
 		for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
@@ -595,5 +650,11 @@ void somGravando()
   tone(buzzer, 1047, 30);
   delay(30);
   noTone(buzzer);
+}
+void disable_coil()
+{
+	digitalWrite(latchPin, LOW);
+	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
+	digitalWrite(latchPin, HIGH);
 }
 //=====================================================================
