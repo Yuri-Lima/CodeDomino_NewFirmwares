@@ -225,7 +225,6 @@ void loop()
 	//else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
 	//===================================================================================================
 	//===================================================================================================
-	
 }
 bool read_rfid()
 {
@@ -326,7 +325,7 @@ bool formas(int edro)
 			//razao = 3;
 			ang = 880; // 870 para razao de 6
 			m = alocarMatriz(6,3);
-			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360;; //linha 1Âª comando
+			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando
 			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
 			callback = caminhar(m[0][0], m[0][1], m[0][2], 6, 1);
 			desalocarMatriz(m,1);
