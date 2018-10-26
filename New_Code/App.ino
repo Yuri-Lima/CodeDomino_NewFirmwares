@@ -20,6 +20,8 @@
 		4 horas de atividades. 
 		O.B.S.: Esse periodo de consumo ainda terá que sermais bem avaliado, pois essa informações é apenas uma ideia,
 		levando em consideração as experiencias que tivier no dercorrer atual dos testes.
+		Tampo de consumo parado: Lipo 1000mAh--> 1 / 0,095 = 10.526 * 60min = 631 minutos ou 10 horas parado.
+		Tampo de consumo em funcionamento: Lipo 1000mAh--> 1 / 0,5 = 2 * 60min = 120 minutos ou 2 horas.
 */
 //==================================================================================================================
 /*
@@ -62,7 +64,7 @@ float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
 const float raioRoda =  3.3;
-float C = (2 * PI * raioRoda); //C"
+float C = (2 * PI * raioRoda); //C"..
 
 //Etapa 3 - Carro
 const float raioEixo = 4.1; 
@@ -168,7 +170,7 @@ void setup()
 
 void loop()
 {	
-	static int option = 0, dist = 4, linha = 0, coluna = 0;
+	static int option = 0, dist = 5, linha = 0, coluna = 0;
 	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true, mat = false;	
 	//===================================================================================================
 	//Função Execute Formas Geometricas
@@ -193,58 +195,65 @@ void loop()
 		if((option != 0) && (option == 1))
 		{
 			m = alocarMatriz(3,3);//FAÇO ALOCAÇÃO
+			delay(1500);
 			/*
 			m[0,0] = S; m[0,1] = F; m[0,2] = L;
 			m[1,0] = F; m[1,1] = R; m[1,2] = F;
 			m[2,0] = F; m[2,1] = R; m[2,2] = F;
 			*/
-			while(!callback_read_f)	
-			{
-				callback_read_f = read_rfid();
-			}
-			if(callback_read_f)	
-			{
-				if( (char(buffer[0]) == Start) || (char(buffer[0]) == Fornt) || (char(buffer[0]) == Back)  || (char(buffer[0]) == Left) || (char(buffer[0]) == Right) )
-				{	
-					m[linha,coluna] = buffer[0];
-					Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
-					caminhar(1, 1,  (r_360 * 3) / C, 0, 1);
-					callback_read_f =false;
-					coluna++;
-					if(coluna > 2)
-					{
-						coluna = 0;
-						linha++;	
-					}
-					if(linha > 3)
-					{
-						linha = 0;
-						coluna = 0;	
-					}						
+			while(!callback_end)
+			{			
+				while(!callback_read_f)	
+				{
+					callback_read_f = read_rfid();
 				}
-				else if((char(buffer[0]) == End ))
-				{	
-					Serial.print(char(m[0,0]));Serial.print(" - ");Serial.print(char(m[0,1]));Serial.print(" - ");Serial.println(char(m[0,2]));
-					Serial.print(char(m[1,0]));Serial.print(" - ");Serial.print(char(m[1,1]));Serial.print(" - ");Serial.println(char(m[1,2]));
-					Serial.print(char(m[2,0]));Serial.print(" - ");Serial.print(char(m[2,1]));Serial.print(" - ");Serial.println(char(m[2,2]));
-
-					caminhar(0, 0,  0, 0, 1);
-					callback_read_f =false;
-					flag_button = true;
-					for (int i = 0; i < 3; i++)//Percorre as linhas do Vetor de Ponteiros
-					{  
-						for (int j = 0; j < 3; j++)//Percorre o Vetor de Inteiros atual.
-						{ 
-							Serial.print(m[i][j]); //Inicializa com 0.
-							j < 3 ? Serial.println() : Serial.print(" - "); 
+				if(callback_read_f)	
+				{
+					if( (char(buffer[0]) == Start) || (char(buffer[0]) == Fornt) || (char(buffer[0]) == Back)  || (char(buffer[0]) == Left) || (char(buffer[0]) == Right) )
+					{	
+						m[linha,coluna] = buffer[0];
+						if(coluna == 2) dist -= 1; 
+						Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
+						caminhar(1, 1,  (r_360 * dist) / C, 0, 1);
+						callback_read_f =false;
+						coluna++;
+						if(coluna > 2)
+						{
+							coluna = 0;
+							linha++;	
 						}
+						if(linha > 3)
+						{
+							linha = 0;
+							coluna = 0;	
+						}						
 					}
-					mat = true;
+					else if((char(buffer[0]) == End ))
+					{	
+						Serial.print(char(m[0,0]));Serial.print(" - ");Serial.print(char(m[0,1]));Serial.print(" - ");Serial.println(char(m[0,2]));
+						Serial.print(char(m[1,0]));Serial.print(" - ");Serial.print(char(m[1,1]));Serial.print(" - ");Serial.println(char(m[1,2]));
+						Serial.print(char(m[2,0]));Serial.print(" - ");Serial.print(char(m[2,1]));Serial.print(" - ");Serial.println(char(m[2,2]));
+
+						caminhar(0, 0,  0, 0, 1);
+						callback_read_f =false;
+						flag_button = true;
+						callback_end = true;
+						mat = true;
+						for (int i = 0; i < 2; i++)//Percorre as linhas do Vetor de Ponteiros
+						{  
+							for (int j = 0; j < 2; j++)//Percorre o Vetor de Inteiros atual.
+							{ 
+								Serial.print(char(m[i][j])); //Inicializa com 0.
+								j < 3 ? Serial.println() : Serial.print(" - "); 
+							}
+						}
+						
 					
 			
+					}
 				}
 			}
-
+			
 			
 		} 
 		
@@ -267,7 +276,7 @@ void loop()
 		if(option != 0)	
 		{
 			flag_button = false;
-			//Serial.println(option);
+			Serial.println(option);
 		}
 		delay(2);
 	}
