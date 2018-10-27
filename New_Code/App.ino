@@ -110,14 +110,14 @@ const int miso =  12;
 const int mosi =  11;
 const int RST_PIN = 9;
 const int SS_PIN  = 10;
-short int amount_Tag = 0;
+short int amount_Parts = 0;
 //=========================================================================================
 //Função Loop
 const int timer_B = 100;  //Timer Botão
-const int timer_F = 400; //Timer Formas Geometricas
+const int timer_F = 400; //Timer  shapes Geometricas
 const int timer_R = 500; //Timer RFID
 //=========================================================================================
-//Função Caminhar
+//Função  walk
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
 const int clockPin = 7; //Pin connected to SH_CP of 74HC595
 const int dataPin = 6; //Pin connected to DS of 74HC595
@@ -139,6 +139,7 @@ MFRC522::StatusCode status;//variable to get card status
 byte buffer[18]; //data transfer buffer (16+2 bytes data+CRC)
 byte size = sizeof(buffer);
 uint8_t pageAddr = 0x06;
+char instructionBuff[256];
 //In this example we will write/read 16 bytes (page 6,7,8 and 9).
 //Ultraligth mem = 16 pages. 4 bytes per page.  
 //Pages 0 to 4 are for special functions. 
@@ -164,16 +165,16 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	bipe();
-	//somInicio();
+	Beep();
+	//soundHome();
 }
 
 void loop()
 {	
 	static int option = 0, dist = 5, linha = 0, coluna = 0;
-	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true, mat = false;	
+	static bool callback_button = false, callback_read_rfid = false, callback_end_logicflow = true, flag_button = true, mat = false;	
 	//===================================================================================================
-	//Função Executa Formas Geometricas
+	//Função Executa  shapes Geometricas
 	//===================================================================================================
 	millisAtual = millis();
 	if (millisAtual % timer_F == 0 )
@@ -181,10 +182,10 @@ void loop()
 		if ((option != 0) && (option != 1))
 		{ 	
 			delay(1500);
-			formas(option);
+			shapes(option);
 			flag_button = true;
-			bipeFino();
-			//somFimExecucao();		
+			fineBeep();
+			//soundEnd();		
 		}
 	}	
 	//===================================================================================================
@@ -194,87 +195,39 @@ void loop()
 	{
 		if((option != 0) && (option == 1))
 		{
-			m = alocarMatriz(3,3);//FAÇO ALOCAÇÃO
-			delay(1500);
+			delay(500);
 			/*
 			m[0,0] = S; m[0,1] = F; m[0,2] = L;
 			m[1,0] = F; m[1,1] = R; m[1,2] = F;
 			m[2,0] = F; m[2,1] = R; m[2,2] = F;
 			*/
-			while(!callback_end)
-			{	
-				callback_read_f = read_rfid();
-				
-				if(callback_read_f)	
-				{
-					if( (char(buffer[0]) == Start) || (char(buffer[0]) == Fornt) || (char(buffer[0]) == Back)  || (char(buffer[0]) == Left) || (char(buffer[0]) == Right) )
-					{	
-						m[linha,coluna] = buffer[0];
-						if(coluna == 2) dist -= 1; 
-						Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
-						caminhar(1, 1,  (r_360 * dist) / C, 0, 1);
-						callback_read_f = false;
-						coluna++;
-						if(coluna > 2)
-						{
-							coluna = 0;
-							linha++;	
-						}
-						if(linha > 3)
-						{
-							linha = 0;
-							coluna = 0;	
-						}						
-					}
-					else if((char(buffer[0]) == End ))
-					{	
-						Serial.print(char(m[0,0]));Serial.print(" - ");Serial.print(char(m[0,1]));Serial.print(" - ");Serial.println(char(m[0,2]));
-						Serial.print(char(m[1,0]));Serial.print(" - ");Serial.print(char(m[1,1]));Serial.print(" - ");Serial.println(char(m[1,2]));
-						Serial.print(char(m[2,0]));Serial.print(" - ");Serial.print(char(m[2,1]));Serial.print(" - ");Serial.println(char(m[2,2]));
+			if(callback_end_logicflow) walk(1, 1,  (r_360 * 3) / C, 0, 1);//prcurando a primeira peça
 
-						caminhar(0, 0,  0, 0, 1);
-						callback_read_f =false;
-						flag_button = true;
-						callback_end = true;
-						mat = true;
-						for (int i = 0; i < 2; i++)//Percorre as linhas do Vetor de Ponteiros
-						{  
-							for (int j = 0; j < 2; j++)//Percorre o Vetor de Inteiros atual.
-							{ 
-								Serial.print(char(m[i][j])); //Inicializa com 0.
-								j < 3 ? Serial.println() : Serial.print(" - "); 
-							}
-						}
-						
-					
-			
-					}
-				}
+			callback_read_rfid = readRfid();
+
+			if(callback_read_rfid)
+			{
+				callback_end_logicflow = logicflow(callback_read_rfid);
+				if(!callback_end_logicflow)
+				{
+					flag_button = true;
+					option = 0;
+				} 
 			}
-			
-			
-		} 
-		
-	}
-		if(mat)
-		{
-			desalocarMatriz(m, 3);
-			Serial.println("Descolado"); 
-			mat = false;
 		}
-		
-	
-	
+		//flag_button = true;//libera o acionamento do botão
+		callback_read_rfid = 0;//Para controle real de retorno da função readRfid. 
+	}	
 	//===================================================================================================
 	//Função ler Botão
 	//===================================================================================================
 	if (millisAtual % timer_B == 0)
 	{
-		if(flag_button) option = leBotao();
+		if(flag_button) option = readbutton();
 		if(option != 0)	
 		{
 			flag_button = false;
-			Serial.println(option);
+			//Serial.println(option);
 		}
 		delay(2);
 	}
@@ -282,10 +235,57 @@ void loop()
 	//===================================================================================================
 	//===================================================================================================
 }
-bool read_rfid()
+bool logicflow(bool callback_read_rfid)
+{	
+	static int dist = 5, linha = 0, coluna = 0, i = 0;
+				
+	if(callback_read_rfid)	
+	{
+		if((char(buffer[0]) == Start) && (amount_Parts == 0))
+		{
+			Serial.println(char(buffer[0]));
+		}					
+		if((amount_Parts >= 1) && (char(buffer[0]) != End) && (char(buffer[0]) != Start))//ou seja, achou a primeira peça, agora vai incluir na matriz de passos
+		{	
+			//callback_end = true;
+			//Serial.println(char(buffer[0]));
+			instructionBuff[i] = char(buffer[0]);
+			Serial.println(instructionBuff[i]);
+			i++;		
+			/*if(coluna == 2) dist -= 1; 
+			Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
+			 walk(1, 1,  (r_360 * dist) / C, 0, 1);
+			callback_read_rfid = false;
+			coluna++;
+			if(coluna > 2)
+			{
+				coluna = 0;
+				linha++;	
+			}
+			if(linha > 3)
+			{
+				linha = 0;
+				coluna = 0;	
+			}
+			*/		
+		}
+		else if( ( char(buffer[0]) == End ))
+		{	
+			for(byte x=0; x<i;x++)Serial.println(instructionBuff[x]);
+			memset(instructionBuff, NULL, sizeof(instructionBuff));
+			i=0;
+			amount_Parts=0;
+			return false;
+		}
+		amount_Parts++;			
+	}
+	return true;		
+}
+bool readRfid()
 {
 	//short int tam=((sizeof(buffer)-2)/2);
 	//Serial.print(tam);
+	Beep();
 	if ( ! mfrc522.PICC_IsNewCardPresent())	return false;
 	if ( ! mfrc522.PICC_ReadCardSerial()) return false;
 	//Serial.println(F("Reading data ... "));
@@ -293,9 +293,10 @@ bool read_rfid()
     status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(pageAddr, buffer, &size);
     if (status != MFRC522::STATUS_OK)return false;
 	mfrc522.PICC_HaltA();
+	fineBeep();
 	return true;
 }
-bool formas(int edro)
+bool  shapes(int edro)
 {   
 	// int p = convertAngulo(45);
 	float ang, dist, cateto_O, razao;
@@ -306,7 +307,7 @@ bool formas(int edro)
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
-			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 1);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1);
 			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			delay(10);
 			desalocarMatriz(m,1);
@@ -316,7 +317,7 @@ bool formas(int edro)
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * dist) / C; //linha 1Âª comando
 			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
-			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 0);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -326,7 +327,7 @@ bool formas(int edro)
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
 			//Serial.print(" Case 1 ");
 			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
-			callback = caminhar(m[0][0], m[0][1],  m[0][2], 0, 0); 
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0); 
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -350,7 +351,7 @@ bool formas(int edro)
 			for(int i = 0;i < 6;i++)
 			{	
 				//Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
-				callback = caminhar(m[i][0], m[i][1],  m[i][2], 0, 0);
+				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0);
 				delay(10);
 			}
 				desalocarMatriz(m,6);
@@ -365,7 +366,7 @@ bool formas(int edro)
 				for(int j = 0;j < 2;j++)
 				{ 
 					//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
-					callback = caminhar(m[j][0], m[j][1],  m[j][2], 0, 0);
+					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0);
 					delay(10);
 				}
 			}
@@ -377,7 +378,7 @@ bool formas(int edro)
 			m = alocarMatriz(6,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando
 			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
-			callback = caminhar(m[0][0], m[0][1], m[0][2], 6, 1);
+			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1);
 			desalocarMatriz(m,1);
 		break;
 		/*
@@ -396,7 +397,7 @@ bool formas(int edro)
 			for(int i = 0;i < edro*2;i++)
 			{	
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
-				caminhar(m[i][0], m[i][1],  m[i][2], 4, 0);
+				 walk(m[i][0], m[i][1],  m[i][2], 4, 0);
 				delay(50);
 			}
 				desalocarMatriz(m,6);
@@ -407,73 +408,71 @@ bool formas(int edro)
 	}
 	return callback;    
 }
-bool caminhar(int _dir, int _esq, int passosCaminhar, int _freqRot, int _CW_CCW)
+bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 { 	 //0 - Parado, 1 - frente , -1 - tras)
-	//Serial.print(_esq);Serial.print(" - ");Serial.println(_dir);
-	bool flag_esq = true, flag_dir=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
-	int passoEsq = 3, passoDir = 3;//Faz o fluxo step binario 
-	byte binEsq[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
-	byte binDir[4]= {B00001100, B00000110, B00000011, B00001001};//FullStep
-	if(_dir == 0) flag_dir = false;//Stop
-	if(_esq == 0) flag_esq = false;//Stop
-	while (passosCaminhar > 0)
+	//Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
+	bool flag_Left = true, flag_Right=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
+	int stepLeft = 3, stepRight = 3;//Faz o fluxo step binario 
+	byte binLeft[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
+	byte binRight[4]= {B00001100, B00000110, B00000011, B00001001};//FullStep
+	if(_Right == 0) flag_Right = false;//Stop
+	if(_Left == 0) flag_Left = false;//Stop
+	while (stepstowalk > 0)
 	{
 		digitalWrite(latchPin, LOW);
 		if(_freqRot > 0)
 		{
 			if(_CW_CCW == 1) 
 			{	
-				//Serial.println(passosCaminhar % _freqRot);
-				(passosCaminhar % _freqRot) != 1 ? flag_esq = false : flag_esq = true;
+				//Serial.println(stepstowalk % _freqRot);
+				(stepstowalk % _freqRot) != 1 ? flag_Left = false : flag_Left = true;
 			}
 			else if(_CW_CCW == -1)
 			{
-				(passosCaminhar % _freqRot) != 1 ? flag_dir = false : flag_dir = true;
+				(stepstowalk % _freqRot) != 1 ? flag_Right = false : flag_Right = true;
 			}
 		}
-		if(flag_esq)
+		if(flag_Left)
 		{
-			if (_esq == 1)
+			if (_Left == 1)
 			{
-				if(passoEsq == 3) passoEsq = -1;
-				passoEsq++;
+				if(stepLeft == 3) stepLeft = -1;
+				stepLeft++;
 			}
-			else if (_esq == -1)
+			else if (_Left == -1)
 			{
-				if(passoEsq == 0) passoEsq = 4;
-					passoEsq--;
+				if(stepLeft == 0) stepLeft = 4;
+					stepLeft--;
 			}
-			//Serial.print("Ligou esquerda: ");Serial.print(passoEsq);Serial.print(" - ");Serial.println("0");
+			//Serial.print("Ligou Leftuerda: ");Serial.print(stepLeft);Serial.print(" - ");Serial.println("0");
 		}
 		
-		if(flag_dir)
+		if(flag_Right)
 		{
-			if (_dir == 1 )
+			if (_Right == 1 )
 			{
-				if(passoDir == 3) passoDir = -1;
-				passoDir++;
+				if(stepRight == 3) stepRight = -1;
+				stepRight++;
 			}
-			else if (_dir == -1 )
+			else if (_Right == -1 )
 			{	
-				if(passoDir == 0) passoDir = 4; 
-				passoDir--;
+				if(stepRight == 0) stepRight = 4; 
+				stepRight--;
 			}
-			//Serial.print("Ligou direita: ");Serial.print("0");Serial.print(" - ");Serial.println(passoDir);
+			//Serial.print("Ligou Righteita: ");Serial.print("0");Serial.print(" - ");Serial.println(stepRight);
 		}
-		shiftOut(dataPin, clockPin, MSBFIRST, binEsq[passoEsq] | binDir[passoDir]); //envia resultado binÃ¡rio para o shift register
+		shiftOut(dataPin, clockPin, MSBFIRST, binLeft[stepLeft] | binRight[stepRight]); //envia resultado binÃ¡rio para o shift register
 		digitalWrite(latchPin, HIGH);
-		passosCaminhar--;
-		flag_esq = true;
-		flag_dir= true;
+		stepstowalk--;
+		flag_Left = true;
+		flag_Right= true;
 		delay(2);
 	}
 	//Desabilitar bobina para economia de energia
-	digitalWrite(latchPin, LOW);
-	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
-	digitalWrite(latchPin, HIGH);
-	return passosCaminhar == 0 ? 1 : 0;
+	disable_coil();
+	return stepstowalk == 0 ? 1 : 0;
 }
-int leBotao()
+int readbutton()
 {
 	short int option, value = 0, sample = 5;
 	//for(byte s = 0; s < sample; s++) 
@@ -484,42 +483,42 @@ int leBotao()
 	{
 		option = 1;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if ((value > Bot_D ) && (value < Bot_E + 5))
 	{
 		option =2;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if ((value > Bot_E ) && (value <Bot_C + 5))
 	{
 		option = 3;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if ((value > Bot_C ) && (value < Bot_A + 5))
 	{
 		option = 4;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if ((value > Bot_A ) && (value < Bot_N + 5))
 	{
 		option = 5;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if ((value > Bot_N ) && (value < Bot_O + 5))
 	{
 		option = 6;
 		//Serial.println(option);
-		bipeFino();
+		fineBeep();
 		//delay(1000);
 	}
 	else if (value < 100) option = 0;
@@ -529,39 +528,51 @@ int leBotao()
 //Ref.: https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
 int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
 {  
-	int i,j; //VariÃ¡veis Auxiliares
-	int **m = (int**)malloc(Linhas * sizeof(int*)); //Aloca um Vetor de Ponteiros
-	if(m==NULL)
+	if(m[0][0]==NULL)
 	{
-		Serial.println("Erro de alocacao em linha");
-		erro();
-		return 0;
-	}
-	for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
-	{  
-		m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posiÃ§Ã£o do Vetor de Ponteiros.
-		if(m[i]==NULL)
+		Serial.println("Done allocation");
+		int i,j; //VariÃ¡veis Auxiliares
+		int **m = (int**)malloc(Linhas * sizeof(int*)); //Aloca um Vetor de Ponteiros
+		if(m==NULL)
 		{
-			Serial.println("Erro de alicacao em coluna");
-			erro();
+			Serial.println("allocation error on line");
+			error();
 			return 0;
 		}
-		for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
-		{ 
-			m[i][j] = 0; //Inicializa com 0.
+		for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
+		{  
+			m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posiÃ§Ã£o do Vetor de Ponteiros.
+			if(m[i]==NULL)
+			{
+				Serial.println("allocation error in column");
+				error();
+				return 0;
+			}
+			for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
+			{ 
+				m[i][j] = 0; //Inicializa com 0.
+			}
 		}
+		return m; //Retorna o Ponteiro para a Matriz Alocada
 	}
-return m; //Retorna o Ponteiro para a Matriz Alocada
-}
+	else if(m[0][0] !=NULL) Serial.println("Undone allocation");
+	
 
+	
+}
 void desalocarMatriz(int **m, int Linhas)
 {
 	 short int i;
-	for (i = 0; i < Linhas; i++)
+	if(m[0][0]!=NULL)
 	{
-		free(m[i]);
+		for (i = 0; i < Linhas; i++)
+		{
+			free(m[i]);
+		}
+		free(m);
+		Serial.println("Undone allocation");//alocação desfeita
 	}
-	free(m);
+	else Serial.println("Non-undone allocation");//alocação não desfeita
 }
 int convertAngulo(float _angulo)
 {  
@@ -569,7 +580,7 @@ int convertAngulo(float _angulo)
 }
 //=====================================================================
 // Funções da Biblioteca Som
-void somInicio()
+void soundHome()
 {
   for( short int i=400;i<1000;i++)
   {
@@ -586,7 +597,7 @@ void somInicio()
   delay(50);
   noTone(buzzer);
 }
-void erro()
+void error()
 {
   tone(buzzer, 391, 800);
   delay(150);
@@ -596,19 +607,19 @@ void erro()
   delay(400);
   noTone(buzzer);
 }
-void bipe()
+void Beep()
 {
   tone(buzzer, 391, 100);
   delay(100);
   noTone(buzzer);
 }
-void bipeFino()
+void fineBeep()
 {
   tone(buzzer, 1047, 30);
   delay(30);
   noTone(buzzer);
 }
-void somAfirmativo()
+void soundOk()
 {
   tone(buzzer, 440, 200);
   delay(200);
@@ -622,7 +633,7 @@ void somAfirmativo()
   delay(400);
   noTone(buzzer);
 }
-void somFimExecucao()
+void soundEnd()
 {
   tone(buzzer, 440, 50);
   delay(50);
@@ -638,7 +649,7 @@ void somFimExecucao()
   delay(400);
   noTone(buzzer);
 }
-void somGravando()
+void soundRecording()
 {
   tone(buzzer, 1047, 30);
   delay(30);
