@@ -173,7 +173,7 @@ void loop()
 	static int option = 0, dist = 5, linha = 0, coluna = 0;
 	static bool callback_button = false, callback_read_f = false, callback_end = false, flag_button = true, mat = false;	
 	//===================================================================================================
-	//Função Execute Formas Geometricas
+	//Função Executa Formas Geometricas
 	//===================================================================================================
 	millisAtual = millis();
 	if (millisAtual % timer_F == 0 )
@@ -188,7 +188,7 @@ void loop()
 		}
 	}	
 	//===================================================================================================
-	//Função Execute Instruções de leitura RFID
+	//Função Executa Instruções de leitura RFID
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
@@ -202,11 +202,9 @@ void loop()
 			m[2,0] = F; m[2,1] = R; m[2,2] = F;
 			*/
 			while(!callback_end)
-			{			
-				while(!callback_read_f)	
-				{
-					callback_read_f = read_rfid();
-				}
+			{	
+				callback_read_f = read_rfid();
+				
 				if(callback_read_f)	
 				{
 					if( (char(buffer[0]) == Start) || (char(buffer[0]) == Fornt) || (char(buffer[0]) == Back)  || (char(buffer[0]) == Left) || (char(buffer[0]) == Right) )
@@ -215,7 +213,7 @@ void loop()
 						if(coluna == 2) dist -= 1; 
 						Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
 						caminhar(1, 1,  (r_360 * dist) / C, 0, 1);
-						callback_read_f =false;
+						callback_read_f = false;
 						coluna++;
 						if(coluna > 2)
 						{
@@ -286,21 +284,15 @@ void loop()
 }
 bool read_rfid()
 {
-	short int tam=((sizeof(buffer)-2)/2);
+	//short int tam=((sizeof(buffer)-2)/2);
 	//Serial.print(tam);
 	if ( ! mfrc522.PICC_IsNewCardPresent())	return false;
 	if ( ! mfrc522.PICC_ReadCardSerial()) return false;
-	Serial.println(F("Reading data ... "));
+	//Serial.println(F("Reading data ... "));
     //data in 4 block is readed at once.
     status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(pageAddr, buffer, &size);
-    if (status != MFRC522::STATUS_OK)
-    {
-        //Serial.print(F("MIFARE_Read() failed: "));
-        //Serial.println(mfrc522.GetStatusCodeName(status));
-        return false;
-    }
+    if (status != MFRC522::STATUS_OK)return false;
 	mfrc522.PICC_HaltA();
-	amount_Tag++;
 	return true;
 }
 bool formas(int edro)
@@ -564,7 +556,7 @@ return m; //Retorna o Ponteiro para a Matriz Alocada
 
 void desalocarMatriz(int **m, int Linhas)
 {
-	int i;
+	 short int i;
 	for (i = 0; i < Linhas; i++)
 	{
 		free(m[i]);
