@@ -1,5 +1,23 @@
+
 //Programa : Code Dominó
 //Autor : Daniel Chagas / Patrick / Yuri Lima
+//=====================================================================================================
+/*
+	Include de libs novas
+	Ao final a ideia é termos modulos de libs, para posterior inclusão em uma lib_master
+*/
+#include <SoundCod.h> //Lib CodeDomino
+#include <ButtonCod.h> //Lib CodeDomino
+//Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
+//=====================================================================================================
+//Include de libs convencionais
+#include <SPI.h>
+#include <deprecated.h>
+#include <MFRC522.h> //Version 1.3.6
+#include <MFRC522Extended.h>
+#include <require_cpp11.h>
+#include <Ultrassonic.h>
+#include <math.h>
 /*
 	Fontes de estudos
 	O.B.S.:Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o de qualquer bug
@@ -8,6 +26,7 @@
 	https://youtu.be/B86nqDRskVU ---> Mecanismo de redução do motor
 	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ ---> RFID
 	https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
+	https://youtu.be/zzHcsJDV3_o --> Encoder incremental - animação
 */
 //==================================================================================================================
 /*
@@ -59,24 +78,24 @@
 */
 //==================================================================================================================
 //Etapa 1 - Motor
-const float GrausPassoDoMotor = 0.1757;
-const float m_erro_r = 1.05;
-int r_360 = int((360 / GrausPassoDoMotor) + m_erro_r);
+double GrausPassoDoMotor = 0.1757;
+double m_erro_r = 1.05;
+double r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
-const float raioRoda =  3.3;
-float C = (2 * PI * raioRoda); //C"..
+double raioRoda =  3.3;
+double C = (2 * PI * raioRoda); //C"..
 
 //Etapa 3 - Carro
-const float raioEixo = 4.1; 
-float C_ = (2 * PI * raioEixo); //C'
+double raioEixo = 4.1; 
+double C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
-float revol_ = C_ / C;//C" / C'
+double revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.050; 
-int e_360 = int(r_360 * (revol_ + m_erro_e));//passo para rotação do proprio eixo
+double m_erro_e = 0.050; 
+double e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Debug
 /*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
@@ -91,22 +110,6 @@ int e_360 = int(r_360 * (revol_ + m_erro_e));//passo para rotação do proprio e
 #define debug_alocarMatriz 0
 #define debug_desalocarMatriz 0
 #define debug_disable_coil 0
-//=====================================================================================================
-/*
-	Include de libs novas
-	Ao final a ideia é termos modulos de libs, para posterior inclusão em uma lib_master
-*/
-#include <SoundCod.h> //Lib CodeDomino
-#include <ButtonCod.h> //Lib CodeDomino
-//Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
-//=====================================================================================================
-//Include de libs convencionais
-#include <SPI.h>
-#include <deprecated.h>
-#include <MFRC522.h> //Version 1.3.6
-#include <MFRC522Extended.h>
-#include <require_cpp11.h>
-#include <Ultrassonic.h>
 //=========================================================================================
 //Função Som
 #define buzzer_pin 3
@@ -215,7 +218,8 @@ void setup()
 
 void loop()
 {	 
-	static int option = 0, dist = (r_360 * 3) / C, linha = 0, coluna = 0;
+	static short int option = 0, linha = 0, coluna = 0;
+	double dist = (r_360 * 3) / C;// 3 cm
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, flag_button = true,callback_end_walk = false;	
 	//===================================================================================================
 	//Para executação da função shapes ou runflow
@@ -273,7 +277,7 @@ void loop()
 }
 bool logicflow(bool callback_read_rfid)
 {	
-	static int dist = 5, linha = 0, coluna = 0;
+	static short int  linha = 0, coluna = 0;
 	static char i = 0;
 	c = 0;				
 	if(callback_read_rfid)	
@@ -318,7 +322,7 @@ bool runflow()
 	#endif
 	byte p = 0;
 	bool callback = false;
-	float stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
+	double stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
 	while(p < c)
 	{
 		#if debug_runflow
