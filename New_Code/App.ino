@@ -210,7 +210,6 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	//buzzer.Beep();
 	buzzer.soundHome();
 }
 
@@ -226,13 +225,12 @@ void loop()
 	{
 		if ((option != 0) && (option != 1))
 		{ 	
-			delay(1500);
+			delay(2000);
 			shapes(option);
 			if(option == 3) 
 			callback_end_runflow = runflow();
 			if(callback_end_runflow) buzzer.soundOk();
 			flag_button = true;
-			//buzzer.fineBeep();
 			buzzer.soundEnd();		
 		}
 	}	
