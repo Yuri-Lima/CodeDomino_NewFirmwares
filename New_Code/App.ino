@@ -2,11 +2,12 @@
 //Autor : Daniel Chagas / Patrick / Yuri Lima
 /*
 	Fontes de estudos
-	Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o do codigo.
-	Nova roda 3D https://www.thingiverse.com/thing:862438/files
-	https://wakatime.com/projects
-	https://youtu.be/B86nqDRskVU - Mecanismo de redução do motor
-	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ -RFID
+	O.B.S.:Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o de qualquer bug
+	https://www.thingiverse.com/thing:862438/files ---> roda 3D usada
+	https://wakatime.com/projects ---> Medição de tempo de programação, para futuros relatorios
+	https://youtu.be/B86nqDRskVU ---> Mecanismo de redução do motor
+	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ ---> RFID
+	https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
 */
 //==================================================================================================================
 /*
@@ -60,7 +61,7 @@
 //Etapa 1 - Motor
 const float GrausPassoDoMotor = 0.1757;
 const float m_erro_r = 1.05;
-float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
+int r_360 = int((360 / GrausPassoDoMotor) + m_erro_r);
 
 //Etapa 2 - Roda 
 const float raioRoda =  3.3;
@@ -74,35 +75,67 @@ float C_ = (2 * PI * raioEixo); //C'
 float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-const float m_erro_e = 0.045; 
-int e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
+const float m_erro_e = 0.050; 
+int e_360 = int(r_360 * (revol_ + m_erro_e));//passo para rotação do proprio eixo
 //=====================================================================================================
-//Include de libs
+//Debug
+/*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
+	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
+*/
+#define debug_setup 0 
+#define debug_rfid 0
+#define debug_logicflow 0
+#define debug_runflow 0
+#define debug_shapes 0
+#define debug_walk 0
+#define debug_alocarMatriz 0
+#define debug_desalocarMatriz 0
+#define debug_disable_coil 0
+//=====================================================================================================
+/*
+	Include de libs novas
+	Ao final a ideia é termos modulos de libs, para posterior inclusão em uma lib_master
+*/
+#include <SoundCod.h> //Lib CodeDomino
+#include <ButtonCod.h> //Lib CodeDomino
+//Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
+//=====================================================================================================
+//Include de libs convencionais
 #include <SPI.h>
 #include <deprecated.h>
-#include <MFRC522.h>//Version 1.3.6
+#include <MFRC522.h> //Version 1.3.6
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
-#include <Ultrasonic.h>
+#include <Ultrassonic.h>
 //=========================================================================================
 //Função Som
-const int buzzer = 3;
+#define buzzer_pin 3
+sound buzzer(buzzer_pin);//Aqui já é algo relacionado a lib SoundCod.h
 //=========================================================================================
-//Valor das peças para orientação
-#define Start 'S'
-#define End  'E'
-#define Fornt  'F'
-#define Back  'B'
-#define Left 'L'
-#define Right 'R'
-//=========================================================================================
-//Valor de cada botão
+//Valor de cada leitura dos botões personalizados de acordo com o nome do modelo (DECANO)
+#define Bot_Pin A0
 #define Bot_D 709
 #define Bot_E 761
 #define Bot_C 822
 #define Bot_A 894
 #define Bot_N 977
 #define Bot_O 1050
+button optionPin(Bot_Pin, Bot_D, Bot_E, Bot_C, Bot_A, Bot_N, Bot_O); //Aqui já é algo relacionado a lib ButtonCod.h
+//=========================================================================================
+//Valor das peças para orientação
+/*
+	Nesse projeto inicial, o objetivo é deixar funcionando para nossa primeita categoria (Little Kids), ou seja, 
+	Comandos básicos devem ser implementados. O define Angle, apenas não está em uso, porem ja temos aplicação que envolve 
+	os movimento em curva, pois encontrei uma especie de razão, onde conseguimos mudar o tamanha do raio, assim conseguimos realizar
+	curvas de acordo com angulos especificados, porem identifiquei, que com certeza termos algumas limitação quanto a angulos minimos.
+*/	
+#define Start 'S'
+#define End   'E'
+#define Front 'F'
+#define Back  'B'
+#define Left  'L'
+#define Right 'R'
+#define Angle 'A'
 //=========================================================================================
 //Função RFID
 const int sck  =  13; 
@@ -122,34 +155,45 @@ const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
 const int clockPin = 7; //Pin connected to SH_CP of 74HC595
 const int dataPin = 6; //Pin connected to DS of 74HC595
 //=========================================================================================
-//Função Lerbotao e loop
-bool botao = false;
-//=========================================================================================
-//Função alocarMatriz e desalocarMatriz
+/*
+	Função alocarMatriz e desalocarMatriz --> Apenas para a função Shapes para aloção de fomatos geometricos predefinidos,
+	como uma especie de padrões de fabrica.
+*/
 int **m;//Matriz bidimensional
 //=========================================================================================
 //Função Loop
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 //=========================================================================================
-//Instanciação de Objetos RFID
+/*
+	Instanciação de Objetos RFID
+	In this example we will write/read 16 bytes (page 6,7,8 and 9).
+	Ultraligth mem = 16 pages. 4 bytes per page.  
+	Pages 0 to 4 are for special functions. 
+*/
 MFRC522 mfrc522(SS_PIN, RST_PIN);//Create MFRC522 instance
-//MFRC522::MIFARE_Key key;//objeto da instancia
 MFRC522::StatusCode status;//variable to get card status 
 byte buffer[18]; //data transfer buffer (16+2 bytes data+CRC)
 byte size = sizeof(buffer);
 uint8_t pageAddr = 0x06;
-char instructionBuff[256];
-//In this example we will write/read 16 bytes (page 6,7,8 and 9).
-//Ultraligth mem = 16 pages. 4 bytes per page.  
-//Pages 0 to 4 are for special functions. 
+/*
+	Bom por enquanto limitei a quantidade de comandos a realizar, pois para a categoria nao tem necessidade, até pq, podemos
+	criar novos tipos de blocos. 
+	Na etapa apos a leitura de comandos, apenas é possivel, realizar nova leitura, quando realizar um reset, em breve irei implementar 
+	as demais utilidades. 
+*/
+//Função logicflow e runflow
+char instructionBuff[20];
+byte c = 0;
+
 
 void setup()
 { 	
 	SPI.begin();
 	mfrc522.PCD_Init();
+	#if debug_setup
 	Serial.begin(9600);
-	memcpy(buffer,"X0000000",((sizeof(buffer)-2)/2));//X para sinalizar inicio de comandos
+	memcpy(buffer,"X0000000",(size-2)/2));//X para sinalizar inicio de comandos
 	Serial.write(char(buffer[0]));
 	Serial.println();
 	//===================================================================================================
@@ -158,6 +202,7 @@ void setup()
 	Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (C_): "));    Serial.println(C_);
 	Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO (revol_): "));   Serial.println(revol_);
 	Serial.print(F("Quantos passos para o CARRO rodar no EIXO (e_360): "));   Serial.println(e_360);
+	#endif
 	//===================================================================================================
 	pinMode(latchPin, OUTPUT);
 	pinMode(clockPin, OUTPUT);
@@ -165,16 +210,16 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	Beep();
-	//soundHome();
+	//buzzer.Beep();
+	buzzer.soundHome();
 }
 
 void loop()
-{	
-	static int option = 0, dist = 5, linha = 0, coluna = 0;
-	static bool callback_button = false, callback_read_rfid = false, callback_end_logicflow = true, flag_button = true, mat = false;	
+{	 
+	static int option = 0, dist = (r_360 * 3) / C, linha = 0, coluna = 0;
+	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, flag_button = true,callback_end_walk = false;	
 	//===================================================================================================
-	//Função Executa  shapes Geometricas
+	//Para executação da função shapes ou runflow
 	//===================================================================================================
 	millisAtual = millis();
 	if (millisAtual % timer_F == 0 )
@@ -183,25 +228,23 @@ void loop()
 		{ 	
 			delay(1500);
 			shapes(option);
+			if(option == 3) 
+			callback_end_runflow = runflow();
+			if(callback_end_runflow) buzzer.soundOk();
 			flag_button = true;
-			fineBeep();
-			//soundEnd();		
+			//buzzer.fineBeep();
+			buzzer.soundEnd();		
 		}
 	}	
 	//===================================================================================================
-	//Função Executa Instruções de leitura RFID
+	//Função de leitura RFID para a função logicflow  
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
 		if((option != 0) && (option == 1))
 		{
-			delay(500);
-			/*
-			m[0,0] = S; m[0,1] = F; m[0,2] = L;
-			m[1,0] = F; m[1,1] = R; m[1,2] = F;
-			m[2,0] = F; m[2,1] = R; m[2,2] = F;
-			*/
-			if(callback_end_logicflow) walk(1, 1,  (r_360 * 3) / C, 0, 1);//prcurando a primeira peça
+			delay(50);
+			if(callback_end_logicflow) callback_end_walk = walk(1, 1,  dist , 0, 1);//prcurando a primeira peça
 
 			callback_read_rfid = readRfid();
 
@@ -215,65 +258,53 @@ void loop()
 				} 
 			}
 		}
-		//flag_button = true;//libera o acionamento do botão
 		callback_read_rfid = 0;//Para controle real de retorno da função readRfid. 
 	}	
 	//===================================================================================================
-	//Função ler Botão
+	//Função ler Botão com return da opção
 	//===================================================================================================
 	if (millisAtual % timer_B == 0)
 	{
-		if(flag_button) option = readbutton();
+		if(flag_button) option = optionPin.readbutton();
 		if(option != 0)	
 		{
 			flag_button = false;
-			//Serial.println(option);
 		}
-		delay(2);
+		delay(2);		
 	}
-	//else Serial.print("Erro de inconsistencia. Favor Reset do Robo.");
-	//===================================================================================================
-	//===================================================================================================
 }
 bool logicflow(bool callback_read_rfid)
 {	
-	static int dist = 5, linha = 0, coluna = 0, i = 0;
-				
+	static int dist = 5, linha = 0, coluna = 0;
+	static char i = 0;
+	c = 0;				
 	if(callback_read_rfid)	
 	{
 		if((char(buffer[0]) == Start) && (amount_Parts == 0))
 		{
+			#if debug_logicflow
 			Serial.println(char(buffer[0]));
+			#endif
 		}					
 		if((amount_Parts >= 1) && (char(buffer[0]) != End) && (char(buffer[0]) != Start))//ou seja, achou a primeira peça, agora vai incluir na matriz de passos
 		{	
-			//callback_end = true;
-			//Serial.println(char(buffer[0]));
 			instructionBuff[i] = char(buffer[0]);
-			Serial.println(instructionBuff[i]);
+			#if debug_logicflow
+			Serial.print(instructionBuff[i]);
+			#endif
 			i++;		
-			/*if(coluna == 2) dist -= 1; 
-			Serial.print(linha); Serial.print(":");Serial.print(coluna);Serial.print("-> ");Serial.println(char(m[linha,coluna]));
-			 walk(1, 1,  (r_360 * dist) / C, 0, 1);
-			callback_read_rfid = false;
-			coluna++;
-			if(coluna > 2)
-			{
-				coluna = 0;
-				linha++;	
-			}
-			if(linha > 3)
-			{
-				linha = 0;
-				coluna = 0;	
-			}
-			*/		
 		}
 		else if( ( char(buffer[0]) == End ))
 		{	
-			for(byte x=0; x<i;x++)Serial.println(instructionBuff[x]);
-			memset(instructionBuff, NULL, sizeof(instructionBuff));
-			i=0;
+			#if debug_logicflow
+			Serial.println();
+			for(byte x=0; x<i;x++)Serial.print(instructionBuff[x]);
+			Serial.println();
+			#endif
+			//memset(instructionBuff, 0, sizeof(instructionBuff));
+			memset(buffer, 0, sizeof(buffer));
+			c = i;
+			i = 0;
 			amount_Parts=0;
 			return false;
 		}
@@ -281,19 +312,92 @@ bool logicflow(bool callback_read_rfid)
 	}
 	return true;		
 }
+bool runflow()
+{	
+	#if debug_runflow
+		Serial.print("Quantos passos: ");
+		Serial.println(c);
+	#endif
+	byte p = 0;
+	bool callback = false;
+	float stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
+	while(p < c)
+	{
+		#if debug_runflow
+			Serial.print("Passo: ");
+			Serial.print(p);
+			Serial.print(" - ");
+			Serial.print("Tag: ");
+		#endif	
+		switch(instructionBuff[p])
+		{
+			case Front:
+				stepsAway = 11.00;
+				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1);
+				#if debug_runflow	
+					Serial.println("F");
+				#endif
+				delay(5);	
+			break;
+			case Left:
+				angledSteps = 90.00;
+				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
+				#if debug_runflow
+					Serial.println("L");
+				#endif
+				delay(5);		
+			break;
+			case Right:
+				angledSteps = 96.00;//foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				#if debug_runflow
+					Serial.println("R");
+				#endif
+				delay(5);		
+			break;
+			case Back:
+				stepsAway = 11.00;
+				callback = walk(-1, -1,  int((r_360 * stepsAway) / C), 0, 1);
+				#if debug_runflow
+					Serial.println("B");	
+				#endif
+				delay(5);	
+			break;
+			case Angle:
+				angledSteps = 60;
+				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				#if debug_runflow
+					Serial.println("A");
+				#endif
+				delay(5);		
+			break;
+			default:
+				buzzer.error();
+				#if debug_runflow
+					Serial.println("Error RunFlow");
+				#endif		
+			break;
+		}
+		if(callback)p++;
+		delay(2);
+	}
+	return callback;
+}
 bool readRfid()
 {
 	//short int tam=((sizeof(buffer)-2)/2);
 	//Serial.print(tam);
-	Beep();
+	buzzer.Beep();
 	if ( ! mfrc522.PICC_IsNewCardPresent())	return false;
 	if ( ! mfrc522.PICC_ReadCardSerial()) return false;
-	//Serial.println(F("Reading data ... "));
+	#if debug_rfid
+	Serial.println(F("Reading data ... "));
+	#endif
     //data in 4 block is readed at once.
     status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(pageAddr, buffer, &size);
     if (status != MFRC522::STATUS_OK)return false;
 	mfrc522.PICC_HaltA();
-	fineBeep();
+	buzzer.fineBeep();
 	return true;
 }
 bool  shapes(int edro)
@@ -303,12 +407,14 @@ bool  shapes(int edro)
 	bool callback = false;
 	switch(edro)
 	{
-		case 9: //Rotação no eixo
+		case 9: //Rotação no eixo ////==> era 1
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
 			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1);
-			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#if debug_shapes
+			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#endif
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -316,17 +422,20 @@ bool  shapes(int edro)
 			dist = 10;// coloque aqui a distancia em cm
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * dist) / C; //linha 1Âª comando
-			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#if debug_shapes
+			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#endif
 			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
-		case 3: //Rotação angular no proprio eixo
+		case 45: //Rotação angular no proprio eixo ////==> era 3
 			ang = 90; //escolha o angulo
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
-			//Serial.print(" Case 1 ");
-			//Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#if debug_shapes
+			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#endif
 			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0); 
 			delay(10);
 			desalocarMatriz(m,1);
@@ -350,7 +459,9 @@ bool  shapes(int edro)
 			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * 90) / 360; //Volta na posição que iniciou
 			for(int i = 0;i < 6;i++)
 			{	
-				//Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
+				#if debug_shapes
+				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
+				#endif
 				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0);
 				delay(10);
 			}
@@ -365,7 +476,9 @@ bool  shapes(int edro)
 			{  
 				for(int j = 0;j < 2;j++)
 				{ 
-					//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
+					#if debug_shapes
+					Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
+					#endif
 					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0);
 					delay(10);
 				}
@@ -377,7 +490,9 @@ bool  shapes(int edro)
 			ang = 440; // 870 para razao de 6
 			m = alocarMatriz(6,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando
-			//Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
+			#if debug_shapes
+			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
+			#endif
 			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1);
 			desalocarMatriz(m,1);
 		break;
@@ -396,7 +511,9 @@ bool  shapes(int edro)
 			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
 			for(int i = 0;i < edro*2;i++)
 			{	
+				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
+				#endif
 				 walk(m[i][0], m[i][1],  m[i][2], 4, 0);
 				delay(50);
 			}
@@ -404,13 +521,34 @@ bool  shapes(int edro)
 		break;
 		*/
 		default :
-		Serial.println("Formato invalido.");  
+		cateto_O = 0;
+		#if debug_shapes
+		Serial.println("Formato invalido."); 
+		#endif 
 	}
 	return callback;    
 }
 bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
-{ 	 //0 - Parado, 1 - frente , -1 - tras)
-	//Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
+{ 	 /*
+		0 --> Parado, 1 --> frente , -1 --> tras
+		Essa função faz todo controle da execução de passos, seja qualquer for a direção, até mesmo curvas. 
+		Como as orientações basicas já nao são um misterio, vou tentar explicar um pouco sobre como tentei recolver
+		o problema da curva, da seguinte forma: 
+		Notei que é preciso uma das rodas dar menos passos que a outra, logico de acordo com a direção, então encontrei uma razão 
+		dada pelo parametro _freqRot, ele é o responsavel, por inibir determidados passos com uma razão entre os passos a caminhar e
+		o resto comparavel a 1, nesse ritimo, ao variar essa divisão, podemos obter acionamentos que variam de 1 passo a cada 2, como
+		1 passo a cada 5 e assim por diante, sendo assim, quanto maior _freqRot, maior sera o tempo de acionamento para 1 passo e o raio 
+		da circunfencia/ curva dimunui, ou seja, é inversamente proporcional. Todos os calculos para realizalçao de movimento circulares, 
+		ou seja, curvas, tem que ser usado como paramentro a variavel, e_360, pois é nela que temos os passos, levando-se em consideração
+		o eixo do carro e todas para seguir em linha reta, seja para tras ou para frente, tem como parametro/variavel r_360.
+		Demais calculos é apenas simples regras 3. Foi usado, na função Shapes case 4, Seno e Tagente, pois para realizar é preciso para
+		criar um Triangulo Retangulo apenas especificando o tipo do triangulo notavel e a medida do cateto opostos, para obter as demais
+		medidas. 
+		Enfim, vi que temos muito coisa a fazer, tanto para uma versão open, como para uma versão comercial mais bem elaborada no sentido (precisão). 
+	*/
+	#if debug_walk
+	Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
+	#endif
 	bool flag_Left = true, flag_Right=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
 	int stepLeft = 3, stepRight = 3;//Faz o fluxo step binario 
 	byte binLeft[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
@@ -419,12 +557,15 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	if(_Left == 0) flag_Left = false;//Stop
 	while (stepstowalk > 0)
 	{
-		digitalWrite(latchPin, LOW);
+		//================================================================================
+		//Aqui temos como realizar uma curva ou circunfencia
 		if(_freqRot > 0)
 		{
 			if(_CW_CCW == 1) 
 			{	
-				//Serial.println(stepstowalk % _freqRot);
+				#if debug_walk
+				Serial.println(stepstowalk % _freqRot);
+				#endif
 				(stepstowalk % _freqRot) != 1 ? flag_Left = false : flag_Left = true;
 			}
 			else if(_CW_CCW == -1)
@@ -432,6 +573,8 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 				(stepstowalk % _freqRot) != 1 ? flag_Right = false : flag_Right = true;
 			}
 		}
+		//================================================================================
+		//Aqui temos como realizar retas e curva em 90°
 		if(flag_Left)
 		{
 			if (_Left == 1)
@@ -442,11 +585,12 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			else if (_Left == -1)
 			{
 				if(stepLeft == 0) stepLeft = 4;
-					stepLeft--;
+				stepLeft--;
 			}
-			//Serial.print("Ligou Leftuerda: ");Serial.print(stepLeft);Serial.print(" - ");Serial.println("0");
+			#if debug_walk
+			Serial.print("Ligou Esquerda: ");Serial.print(stepLeft);Serial.print(" - ");Serial.println("0");
+			#endif
 		}
-		
 		if(flag_Right)
 		{
 			if (_Right == 1 )
@@ -459,9 +603,12 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 				if(stepRight == 0) stepRight = 4; 
 				stepRight--;
 			}
-			//Serial.print("Ligou Righteita: ");Serial.print("0");Serial.print(" - ");Serial.println(stepRight);
+			#if debug_walk
+			Serial.print("Ligou Direita: ");Serial.print("0");Serial.print(" - ");Serial.println(stepRight);
+			#endif
 		}
-		shiftOut(dataPin, clockPin, MSBFIRST, binLeft[stepLeft] | binRight[stepRight]); //envia resultado binÃ¡rio para o shift register
+		digitalWrite(latchPin, LOW);
+		shiftOut(dataPin, clockPin, MSBFIRST, binRight[stepRight] | binLeft[stepLeft]); //envia resultado binÃ¡rio para o shift register
 		digitalWrite(latchPin, HIGH);
 		stepstowalk--;
 		flag_Left = true;
@@ -472,93 +619,38 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	disable_coil();
 	return stepstowalk == 0 ? 1 : 0;
 }
-int readbutton()
-{
-	short int option, value = 0, sample = 5;
-	//for(byte s = 0; s < sample; s++) 
-	value = analogRead(A0);
-	//value = value / sample;
-	//Serial.println(value);
-	if ((value > 100) && (value < Bot_D))
-	{
-		option = 1;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if ((value > Bot_D ) && (value < Bot_E + 5))
-	{
-		option =2;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if ((value > Bot_E ) && (value <Bot_C + 5))
-	{
-		option = 3;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if ((value > Bot_C ) && (value < Bot_A + 5))
-	{
-		option = 4;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if ((value > Bot_A ) && (value < Bot_N + 5))
-	{
-		option = 5;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if ((value > Bot_N ) && (value < Bot_O + 5))
-	{
-		option = 6;
-		//Serial.println(option);
-		fineBeep();
-		//delay(1000);
-	}
-	else if (value < 100) option = 0;
-	delay(5);
-	return option;
-}
-//Ref.: https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
 int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
 {  
-	if(m[0][0]==NULL)
+	#if debug_alocarMatriz
+	Serial.println("Done allocation");
+	#endif
+	int i,j; //VariÃ¡veis Auxiliares
+	int **m = (int**)malloc(Linhas * sizeof(int*)); //Aloca um Vetor de Ponteiros
+	if(m==NULL)
 	{
-		Serial.println("Done allocation");
-		int i,j; //VariÃ¡veis Auxiliares
-		int **m = (int**)malloc(Linhas * sizeof(int*)); //Aloca um Vetor de Ponteiros
-		if(m==NULL)
+		#if debug_alocarMatriz
+		Serial.println("allocation error on line");
+		#endif
+		buzzer.error();
+		return 0;
+	}
+	for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
+	{  
+		m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posiÃ§Ã£o do Vetor de Ponteiros.
+		if(m[i]==NULL)
 		{
-			Serial.println("allocation error on line");
-			error();
+			#if debug_alocarMatriz
+			Serial.println("allocation error in column");
+			#endif
+			buzzer.error();
 			return 0;
 		}
-		for (i = 0; i < Linhas; i++)//Percorre as linhas do Vetor de Ponteiros
-		{  
-			m[i] = (int*) malloc(Colunas * sizeof(int)); //Aloca um Vetor de Inteiros para cada posiÃ§Ã£o do Vetor de Ponteiros.
-			if(m[i]==NULL)
-			{
-				Serial.println("allocation error in column");
-				error();
-				return 0;
-			}
-			for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
-			{ 
-				m[i][j] = 0; //Inicializa com 0.
-			}
+		for (j = 0; j < Colunas; j++)//Percorre o Vetor de Inteiros atual.
+		{ 
+			m[i][j] = 0; //Inicializa com 0.
 		}
-		return m; //Retorna o Ponteiro para a Matriz Alocada
 	}
-	else if(m[0][0] !=NULL) Serial.println("Undone allocation");
-	
-
-	
+	return m; //Retorna o Ponteiro para a Matriz Alocada	
 }
 void desalocarMatriz(int **m, int Linhas)
 {
@@ -570,103 +662,29 @@ void desalocarMatriz(int **m, int Linhas)
 			free(m[i]);
 		}
 		free(m);
+		#if debug_desalocarMatriz
 		Serial.println("Undone allocation");//alocação desfeita
+		#endif
 	}
-	else Serial.println("Non-undone allocation");//alocação não desfeita
+	else
+	{ 	
+		i = 0;
+		#if debug_desalocarMatriz
+		Serial.println("Non-undone allocation");//alocação não desfeita
+		#endif
+	}
 }
+
 int convertAngulo(float _angulo)
 {  
 	return int((e_360 * _angulo) / 360);
-}
-//=====================================================================
-// Funções da Biblioteca Som
-void soundHome()
-{
-  for( short int i=400;i<1000;i++)
-  {
-    tone(buzzer, i, 3);
-    delay(3);
-  }
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, 1000, 50);
-  delay(50);
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, 1000, 50);
-  delay(50);
-  noTone(buzzer);
-}
-void error()
-{
-  tone(buzzer, 391, 800);
-  delay(150);
-  noTone(buzzer);
-  delay(30);
-  tone(buzzer, 261, 1500);
-  delay(400);
-  noTone(buzzer);
-}
-void Beep()
-{
-  tone(buzzer, 391, 100);
-  delay(100);
-  noTone(buzzer);
-}
-void fineBeep()
-{
-  tone(buzzer, 1047, 30);
-  delay(30);
-  noTone(buzzer);
-}
-void soundOk()
-{
-  tone(buzzer, 440, 200);
-  delay(200);
-  noTone(buzzer);
-  delay(100);
-  tone(buzzer, 494, 200);
-  delay(200);
-  noTone(buzzer);
-  delay(100);
-  tone(buzzer, 523, 400);
-  delay(400);
-  noTone(buzzer);
-}
-void soundEnd()
-{
-  tone(buzzer, 440, 50);
-  delay(50);
-  tone(buzzer, 494, 50);
-  delay(50);
-  tone(buzzer, 523, 400);
-  delay(400);
-  tone(buzzer, 494, 50);
-  delay(50);
-  tone(buzzer, 440, 50);
-  delay(50);
-  tone(buzzer, 391, 400);
-  delay(400);
-  noTone(buzzer);
-}
-void soundRecording()
-{
-  tone(buzzer, 1047, 30);
-  delay(30);
-  noTone(buzzer);
-  delay(100);
-  tone(buzzer, 1047, 30);
-  delay(30);
-  noTone(buzzer);
-  delay(100);
-  tone(buzzer, 1047, 30);
-  delay(30);
-  noTone(buzzer);
 }
 void disable_coil()
 {
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
+	#if debug_disable_coil
+		Serial.println("Motores desligados.");
+	#endif
 }
-//=====================================================================
