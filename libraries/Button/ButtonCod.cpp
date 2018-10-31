@@ -20,7 +20,8 @@ button::button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, i
 int button::readbutton()
 {	
 	sound buzzer(buzzerPin);
-	short int option, value = 0, sample = 5, time_button = 0;
+	short int option, value = 0, sample = 5;
+	static int time_button = 0;
 	value = analogRead(_Bot_pin);
 	
 	if (value >= 100)
@@ -41,6 +42,7 @@ int button::readbutton()
 		{
 			option = 1;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 				Serial.println(option);
 			#endif	
@@ -49,6 +51,7 @@ int button::readbutton()
 		{
 			option = 2;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 			Serial.println(option);
 			#endif
@@ -57,6 +60,7 @@ int button::readbutton()
 		{
 			option = 3;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 				Serial.println(option);
 			#endif
@@ -65,6 +69,7 @@ int button::readbutton()
 		{
 			option = 4;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 				Serial.println(option);
 			#endif
@@ -73,6 +78,7 @@ int button::readbutton()
 		{
 			option = 5;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 				Serial.println(option);
 			#endif
@@ -81,6 +87,7 @@ int button::readbutton()
 		{
 			option = 6;
 			buzzer.fineBeep();
+			time_button = 0;
 			#if debug
 				Serial.println(option);
 			#endif
@@ -97,6 +104,7 @@ int button::readbutton()
 	{
 		option = 7;
 		buzzer.fineBeep();
+		time_button = 0;
 	}	
 	return option;
 }
