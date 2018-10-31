@@ -20,57 +20,83 @@ button::button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, i
 int button::readbutton()
 {	
 	sound buzzer(buzzerPin);
-	short int option, value = 0, sample = 5;
+	short int option, value = 0, sample = 5, time_button = 0;
 	value = analogRead(_Bot_pin);
-	if ((value > 100) && (value < _Bot_D))
+	
+	if (value >= 100)
 	{
-		option = 1;
-		buzzer.fineBeep();
-		#if debug
-			Serial.println(option);
-		#endif	
+		time_button++;
 	}
-	else if ((value > _Bot_D ) && (value < _Bot_E + 5))
+	else
 	{
-		option = 2;
-		buzzer.fineBeep();
-		#if debug
-			Serial.println(option);
-		#endif
+		option = 0;
+		time_button = 0;
 	}
-	else if ((value > _Bot_E ) && (value < _Bot_C + 5))
+	delay(10);
+
+	//quick pressed
+	if((time_button < 20) && (time_button > 0))
 	{
-		option = 3;
-		buzzer.fineBeep();
-		#if debug
+		if ((value > 100) && (value < _Bot_D))
+		{
+			option = 1;
+			buzzer.fineBeep();
+			#if debug
+				Serial.println(option);
+			#endif	
+		}
+		else if ((value > _Bot_D ) && (value < _Bot_E + 5))
+		{
+			option = 2;
+			buzzer.fineBeep();
+			#if debug
 			Serial.println(option);
-		#endif
+			#endif
+		}
+		else if ((value > _Bot_E ) && (value < _Bot_C + 5))
+		{
+			option = 3;
+			buzzer.fineBeep();
+			#if debug
+				Serial.println(option);
+			#endif
+		}
+		else if ((value > _Bot_C ) && (value < _Bot_A + 5))
+		{
+			option = 4;
+			buzzer.fineBeep();
+			#if debug
+				Serial.println(option);
+			#endif
+		}
+		else if ((value > _Bot_A ) && (value < _Bot_N + 5))
+		{
+			option = 5;
+			buzzer.fineBeep();
+			#if debug
+				Serial.println(option);
+			#endif
+		}
+		else if ((value > _Bot_N ) && (value < _Bot_O + 5))
+		{
+			option = 6;
+			buzzer.fineBeep();
+			#if debug
+				Serial.println(option);
+			#endif
+		}
+		else if (value < 100)
+		{
+			option = 0;
+			time_button = 0;
+		}
+		delay(5);
 	}
-	else if ((value > _Bot_C ) && (value < _Bot_A + 5))
+	//long pressed
+	else if((time_button > 30))
 	{
-		option = 4;
+		option = 7;
 		buzzer.fineBeep();
-		#if debug
-			Serial.println(option);
-		#endif
-	}
-	else if ((value > _Bot_A ) && (value < _Bot_N + 5))
-	{
-		option = 5;
-		buzzer.fineBeep();
-		#if debug
-			Serial.println(option);
-		#endif
-	}
-	else if ((value > _Bot_N ) && (value < _Bot_O + 5))
-	{
-		option = 6;
-		buzzer.fineBeep();
-		#if debug
-			Serial.println(option);
-		#endif
-	}
-	else if (value < 100) option = 0;
-	delay(5);
+	}	
 	return option;
 }
