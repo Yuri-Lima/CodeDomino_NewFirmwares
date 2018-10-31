@@ -233,7 +233,7 @@ void loop()
 	//===================================================================================================
 	if (millisAtual % timer_B == 0)
 	{
-		if(flag_button) option = optionPin.readbutton();
+		if(flag_button) option = optionPin.readbutton(); //long pressed e quick pressed
 		if(option != 0)	
 		{
 			flag_button = false;
@@ -248,7 +248,7 @@ void loop()
 		if((option != 0) && (option == 1))
 		{
 			delay(10);
-			if((callback_end_logicflow) && (!callback_end_sonic))callback_end_walk = walk(1, 1,  dist , 0, 1);//prcurando a primeira peça
+			if((callback_end_logicflow) && (!callback_end_sonic))callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça
 
 			callback_read_rfid = readRfid();
 
@@ -574,7 +574,7 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	//variaveis de verificação de distancia
 	unsigned long millisAtual;
 	int timer_S = 100;
-	bool callback_end_sonic = false;
+	bool callback_end_sonic = false, flag_button = true;
 	double U_sonic =0.00, detected_min = 4.00,detected_max = 15.00;
 	//==============================================================
 	bool flag_Left = true, flag_Right=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
@@ -587,7 +587,8 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	{
 		//==============================================================
 		//Bloco de verificação de distancia, ainda em testes
-		/*millisAtual = millis();
+		/*
+		millisAtual = millis();
 		if (millisAtual % timer_S == 0)
 		{
 			U_sonic = sonic.getDistancia(CENTIMETRO);
@@ -597,9 +598,17 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 				buzzer.Beep();
 			}
 			else callback_end_sonic = false;	
-		}
-		if(!callback_end_sonic)
-		{*/
+		}*/
+		//==============================================================
+		//Bloco de verificação de um botão qualquer
+		if(optionPin.readbutton()) 
+	  {
+		  flag_button = false;
+		  stepstowalk = 0;
+		}	
+	  
+		if(flag_button)
+		{
 			//================================================================================
 			//Aqui temos como realizar uma curva ou circunfencia
 			if(_freqRot > 0)
@@ -658,7 +667,7 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			flag_Right= true;
 			delay(2);
 		}	
-	//}
+	}
 	//Desabilitar bobina para economia de energia
 	disable_coil();
 	return stepstowalk == 0 ? 1 : 0;
@@ -736,3 +745,4 @@ int convertAngulo(float _angulo)
 {  
 	return int((e_360 * _angulo) / 360);
 }
+
