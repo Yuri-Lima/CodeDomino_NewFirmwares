@@ -3,11 +3,10 @@
 #include "ButtonCod.h"
 
 #define buzzerPin 3
-#define debug 1
+#define debug 0
 
 button::button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, int Bot_O)
-{
-    pinMode(pin, INPUT);
+{	pinMode(pin, INPUT);
     _Bot_pin = pin;
     _Bot_D = Bot_D;
     _Bot_E = Bot_E;
@@ -17,94 +16,138 @@ button::button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, i
     _Bot_O = Bot_O;
 }
 
-int button::readbutton()
+int button::readbutton(char LQ0)
 {	
 	sound buzzer(buzzerPin);
-	short int option, value = 0, sample = 5;
-	static int time_button = 0;
-	value = analogRead(_Bot_pin);
-	
-	if (value >= 100)
+	short int option, sample = 5;
+	//Serial.println(LQ0);
+	if ((reading[1]  > 100) && (reading[1]  < _Bot_D) && (LQ0 == 'Q'))
 	{
-		time_button++;
-	}
-	else
-	{
-		option = 0;
-		time_button = 0;
-	}
-	delay(10);
-
-	//quick pressed
-	if((time_button < 20) && (time_button > 0))
-	{
-		if ((value > 100) && (value < _Bot_D))
-		{
-			option = 1;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
-				Serial.println(option);
-			#endif	
-		}
-		else if ((value > _Bot_D ) && (value < _Bot_E + 5))
-		{
-			option = 2;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
+		option = 1;
+		buzzer.fineBeep();
+		#if debug
 			Serial.println(option);
-			#endif
-		}
-		else if ((value > _Bot_E ) && (value < _Bot_C + 5))
-		{
-			option = 3;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
-				Serial.println(option);
-			#endif
-		}
-		else if ((value > _Bot_C ) && (value < _Bot_A + 5))
-		{
-			option = 4;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
-				Serial.println(option);
-			#endif
-		}
-		else if ((value > _Bot_A ) && (value < _Bot_N + 5))
-		{
-			option = 5;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
-				Serial.println(option);
-			#endif
-		}
-		else if ((value > _Bot_N ) && (value < _Bot_O + 5))
-		{
-			option = 6;
-			buzzer.fineBeep();
-			time_button = 0;
-			#if debug
-				Serial.println(option);
-			#endif
-		}
-		else if (value < 100)
-		{
-			option = 0;
-			time_button = 0;
-		}
-		delay(5);
+		#endif	
 	}
-	//long pressed
-	else if((time_button > 30))
+	else if ((reading[1]  > _Bot_D ) && (reading[1]  < _Bot_E + 5) && (LQ0 == 'Q'))
+	{
+		option = 2;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_E ) && (reading[1]  < _Bot_C + 5) && (LQ0 == 'Q'))
+	{
+		option = 3;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_C ) && (reading[1]  < _Bot_A + 5) && (LQ0 == 'Q'))
+	{
+		option = 4;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_A ) && (reading[1]  < _Bot_N + 5) && (LQ0 == 'Q'))
+	{
+		option = 5;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_N ) && (reading[1]  < _Bot_O + 5) && (LQ0 == 'Q'))
+	{
+		option = 6;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}if ((reading[1]  > 100) && (reading[1]  < _Bot_D) && (LQ0 == 'L'))
 	{
 		option = 7;
 		buzzer.fineBeep();
-		time_button = 0;
-	}	
+		#if debug
+			Serial.println(option);
+		#endif	
+	}
+	else if ((reading[1]  > _Bot_D ) && (reading[1]  < _Bot_E + 5) && (LQ0 == 'L'))
+	{
+		option = 8;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_E ) && (reading[1]  < _Bot_C + 5) && (LQ0 == 'L'))
+	{
+		option = 9;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_C ) && (reading[1]  < _Bot_A + 5) && (LQ0 == 'L'))
+	{
+		option = 10;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_A ) && (reading[1]  < _Bot_N + 5) && (LQ0 == 'L'))
+	{
+		option = 11;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if ((reading[1]  > _Bot_N ) && (reading[1]  < _Bot_O + 5) && (LQ0 == 'L'))
+	{
+		option = 12;
+		buzzer.fineBeep();
+		#if debug
+			Serial.println(option);
+		#endif
+	}
+	else if (reading[1]  < 100) option = 0;
+	reading[1] = 0;
+	delay(5);
 	return option;
 }
+char button::pressedtime()
+{
+	reading[0] = analogRead(_Bot_pin) > 100;
+	reading[1] = analogRead(_Bot_pin);
+	while(reading[0])
+	{
+		reading[0] = analogRead(_Bot_pin) > 100;
+		//reading[1] = analogRead(_Bot_pin);
+		if (reading[0] != lastButtonState)
+		{
+    		lastDebounceTime = millis();
+		}
+		if ((millis() - lastDebounceTime) > debounceQuickPressed)
+		{
+			teste += 1;
+			if(teste >= debounceLongPressed)
+			{
+				return 'L';//LongPressed
+				
+			}
+		}
+		lastButtonState = reading[0];
+	}
+	if((teste <= debounceLongPressed) && (teste >= debounceQuickPressed)) return 'Q';//QuickPressed
+	teste = 0;
+	if(teste == 0) return '0';
+	
+	
+}
+

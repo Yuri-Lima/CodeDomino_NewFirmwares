@@ -17,7 +17,7 @@
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
 #include <Ultrassonic.h>
-#include <math.h>
+
 /*
 	Fontes de estudos
 	O.B.S.:Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o de qualquer bug
@@ -78,30 +78,30 @@
 */
 //==================================================================================================================
 //Etapa 1 - Motor
-double GrausPassoDoMotor = 0.1757;
-double m_erro_r = 1.05;
-double r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
+float GrausPassoDoMotor = 0.1757;
+float m_erro_r = 1.05;
+float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
-double raioRoda =  3.3;
-double C = (2 * PI * raioRoda); //C"..
+float raioRoda =  3.3;
+float C = (2 * PI * raioRoda); //C"..
 
 //Etapa 3 - Carro
-double raioEixo = 4.1; 
-double C_ = (2 * PI * raioEixo); //C'
+float raioEixo = 4.1; 
+float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
-double revol_ = C_ / C;//C" / C'
+float revol_ = C_ / C;//C" / C'
 
 //Etapa 5 - Passos
-double m_erro_e = 0.050; 
-double e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
+float m_erro_e = 0.050; 
+float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //=====================================================================================================
 //Debug
 /*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
-#define debug_setup 0 
+#define debug_setup 1 
 #define debug_rfid 0
 #define debug_logicflow 0
 #define debug_runflow 0
@@ -149,14 +149,20 @@ const int SS_PIN  = 10;
 short int amount_Parts = 0;
 //=========================================================================================
 //Função Loop
-const int timer_B = 100;  //Timer Botão
-const int timer_F = 400; //Timer  shapes Geometricas
-const int timer_R = 500; //Timer RFID
+const int timer_B = 100;     //Timer Botão
+const int timer_R = 500;  	//Timer RFID
+const int timer_F = 1000;  //Timer  shapes Geometricas
+const int timer_S = 1500; // Timer Ultrassonic
 //=========================================================================================
 //Função  walk
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
 const int clockPin = 7; //Pin connected to SH_CP of 74HC595
 const int dataPin = 6; //Pin connected to DS of 74HC595
+//=========================================================================================
+//Função  Ultrassonic
+int trig = 5; //ultrasom
+int echo = 4; //ultrasom
+Ultrassonic sonic(trig, echo);
 //=========================================================================================
 /*
 	Função alocarMatriz e desalocarMatriz --> Apenas para a função Shapes para aloção de fomatos geometricos predefinidos,
@@ -194,9 +200,10 @@ void setup()
 { 	
 	SPI.begin();
 	mfrc522.PCD_Init();
+
 	#if debug_setup
 	Serial.begin(9600);
-	memcpy(buffer,"X0000000",(size-2)/2));//X para sinalizar inicio de comandos
+	memcpy(buffer,"X0000000",(size-2)/2);//X para sinalizar inicio de comandos
 	Serial.write(char(buffer[0]));
 	Serial.println();
 	//===================================================================================================
@@ -213,15 +220,54 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	buzzer.soundHome();
+	//buzzer.soundHome();
 }
 
 void loop()
 {	 
 	static short int option = 0, linha = 0, coluna = 0;
-	double dist = (r_360 * 3) / C;// 3 cm
-	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, flag_button = true,callback_end_walk = false;	
+	float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
+	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
+				flag_button = true,callback_end_walk = false, callback_end_sonic = false;	
 	//===================================================================================================
+	//Função ler Botão com return da opção
+	//===================================================================================================
+	if (millisAtual % timer_B == 0)
+	{
+		char LQ0 = optionPin.pressedtime(); 
+		if(LQ0 != '0') optionPin.readbutton(LQ0);
+		if(flag_button)  //long pressed e quick pressed
+		if(option != 0)	
+		{
+			flag_button = false;
+		}
+		delay(2);		
+	}	
+	//===================================================================================================
+	//Função de leitura RFID para a função logicflow  
+	//===================================================================================================
+	if (millisAtual % timer_R == 0)
+	{
+		if((option != 0) && (option == 1))
+		{
+			delay(50);
+			if((callback_end_logicflow) && (!callback_end_sonic))callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça
+
+			callback_read_rfid = readRfid();
+
+			if(callback_read_rfid && (!callback_end_sonic))
+			{
+				callback_end_logicflow = logicflow(callback_read_rfid);
+				if(!callback_end_logicflow)
+				{
+					flag_button = true;
+					option = 0;
+				} 
+			}
+		}
+		callback_read_rfid = 0;//Para controle real de retorno da função readRfid. 
+	}
+		//===================================================================================================
 	//Para executação da função shapes ou runflow
 	//===================================================================================================
 	millisAtual = millis();
@@ -234,47 +280,25 @@ void loop()
 			if(option == 3) 
 			callback_end_runflow = runflow();
 			if(callback_end_runflow) buzzer.soundOk();
-			flag_button = true;
-			buzzer.soundEnd();		
+			flag_button = true;	
+			option = 0;	
 		}
-	}	
-	//===================================================================================================
-	//Função de leitura RFID para a função logicflow  
-	//===================================================================================================
-	if (millisAtual % timer_R == 0)
-	{
-		if((option != 0) && (option == 1))
-		{
-			delay(50);
-			if(callback_end_logicflow) callback_end_walk = walk(1, 1,  dist , 0, 1);//prcurando a primeira peça
-
-			callback_read_rfid = readRfid();
-
-			if(callback_read_rfid)
-			{
-				callback_end_logicflow = logicflow(callback_read_rfid);
-				if(!callback_end_logicflow)
-				{
-					flag_button = true;
-					option = 0;
-				} 
-			}
-		}
-		callback_read_rfid = 0;//Para controle real de retorno da função readRfid. 
-	}	
-	//===================================================================================================
-	//Função ler Botão com return da opção
-	//===================================================================================================
-	if (millisAtual % timer_B == 0)
-	{
-		if(flag_button) option = optionPin.readbutton();
-		if(option != 0)	
-		{
-			flag_button = false;
-		}
-		delay(2);		
 	}
+	/*	
+	if (millisAtual % timer_S == 0)
+	{
+		U_sonic = sonic.getDistancia(CENTIMETRO);
+		if(U_sonic <= 10) 
+		{
+			callback_end_sonic = true;
+			buzzer.Beep();
+		}
+		else callback_end_sonic = false;	
+	}*/
 }
+/*
+=====================================================================================================
+*/
 bool logicflow(bool callback_read_rfid)
 {	
 	static short int  linha = 0, coluna = 0;
@@ -322,7 +346,7 @@ bool runflow()
 	#endif
 	byte p = 0;
 	bool callback = false;
-	double stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
+	float stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
 	while(p < c)
 	{
 		#if debug_runflow
@@ -342,7 +366,7 @@ bool runflow()
 				delay(5);	
 			break;
 			case Left:
-				angledSteps = 90.00;
+				angledSteps = 95.00;
 				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("L");
@@ -350,7 +374,7 @@ bool runflow()
 				delay(5);		
 			break;
 			case Right:
-				angledSteps = 96.00;//foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				angledSteps = 95.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
 				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("R");
@@ -379,10 +403,10 @@ bool runflow()
 					Serial.println("Error RunFlow");
 				#endif		
 			break;
-		}
+		}	
 		if(callback)p++;
 		delay(2);
-	}
+	}	
 	return callback;
 }
 bool readRfid()
@@ -551,7 +575,14 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	#if debug_walk
 	Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
 	#endif
-	bool flag_Left = true, flag_Right=true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
+	//==============================================================
+	//variaveis de verificação de distancia
+	/*unsigned long millisAtual;
+	int timer_S = 100;
+	bool callback_end_sonic = false, flag_button = true;
+	float U_sonic =0.00, detected_min = 4.00,detected_max = 15.00;*/
+	//==============================================================
+	bool flag_Left = true, flag_Right=true, flag_button = true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
 	int stepLeft = 3, stepRight = 3;//Faz o fluxo step binario 
 	byte binLeft[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
 	byte binRight[4]= {B00001100, B00000110, B00000011, B00001001};//FullStep
@@ -559,68 +590,106 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	if(_Left == 0) flag_Left = false;//Stop
 	while (stepstowalk > 0)
 	{
-		//================================================================================
-		//Aqui temos como realizar uma curva ou circunfencia
-		if(_freqRot > 0)
+		//==============================================================
+		//Bloco de verificação de distancia, ainda em testes
+		/*
+		millisAtual = millis();
+		if (millisAtual % timer_S == 0)
 		{
-			if(_CW_CCW == 1) 
-			{	
+			U_sonic = sonic.getDistancia(CENTIMETRO);
+			if((U_sonic <= detected_max) && (U_sonic >= detected_min))//range
+			{
+				callback_end_sonic = true;
+				buzzer.Beep();
+			}
+			else callback_end_sonic = false;	
+		}*/
+		//==============================================================
+		//Bloco de verificação de um botão qualquer
+		//if(optionPin.readbutton()) 
+		//{
+			//flag_button = false;
+			//stepstowalk = 0;
+		//}	
+
+		//if(flag_button)
+		//{
+			//================================================================================
+			//Aqui temos como realizar uma curva ou circunfencia
+			if(_freqRot > 0)
+			{
+				if(_CW_CCW == 1) 
+				{	
+					#if debug_walk
+					Serial.println(stepstowalk % _freqRot);
+					#endif
+					(stepstowalk % _freqRot) != 1 ? flag_Left = false : flag_Left = true;
+				}
+				else if(_CW_CCW == -1)
+				{
+					(stepstowalk % _freqRot) != 1 ? flag_Right = false : flag_Right = true;
+				}
+			}
+			//================================================================================
+			//Aqui temos como realizar retas e curva em 90°
+			if(flag_Left)
+			{
+				if (_Left == 1)
+				{
+					if(stepLeft == 0) stepLeft = 4;
+					stepLeft--;				
+				}
+				else if (_Left == -1)
+				{
+					if(stepLeft == 3) stepLeft = -1;
+					stepLeft++;
+				}
 				#if debug_walk
-				Serial.println(stepstowalk % _freqRot);
+				Serial.print("Ligou Esquerda: ");Serial.print(stepLeft);Serial.print(" - ");Serial.println("0");
 				#endif
-				(stepstowalk % _freqRot) != 1 ? flag_Left = false : flag_Left = true;
 			}
-			else if(_CW_CCW == -1)
+			if(flag_Right)
 			{
-				(stepstowalk % _freqRot) != 1 ? flag_Right = false : flag_Right = true;
+				if (_Right == 1 )
+				{
+					if(stepRight == 0) stepRight = 4; 
+					stepRight--;
+				}
+				else if (_Right == -1 )
+				{	
+					if(stepRight == 3) stepRight = -1;
+					stepRight++;				
+				}
+				#if debug_walk
+				Serial.print("Ligou Direita: ");Serial.print("0");Serial.print(" - ");Serial.println(stepRight);
+				#endif
 			}
-		}
-		//================================================================================
-		//Aqui temos como realizar retas e curva em 90°
-		if(flag_Left)
-		{
-			if (_Left == 1)
-			{
-				if(stepLeft == 3) stepLeft = -1;
-				stepLeft++;
-			}
-			else if (_Left == -1)
-			{
-				if(stepLeft == 0) stepLeft = 4;
-				stepLeft--;
-			}
-			#if debug_walk
-			Serial.print("Ligou Esquerda: ");Serial.print(stepLeft);Serial.print(" - ");Serial.println("0");
-			#endif
-		}
-		if(flag_Right)
-		{
-			if (_Right == 1 )
-			{
-				if(stepRight == 3) stepRight = -1;
-				stepRight++;
-			}
-			else if (_Right == -1 )
-			{	
-				if(stepRight == 0) stepRight = 4; 
-				stepRight--;
-			}
-			#if debug_walk
-			Serial.print("Ligou Direita: ");Serial.print("0");Serial.print(" - ");Serial.println(stepRight);
-			#endif
-		}
-		digitalWrite(latchPin, LOW);
-		shiftOut(dataPin, clockPin, MSBFIRST, binRight[stepRight] | binLeft[stepLeft]); //envia resultado binÃ¡rio para o shift register
-		digitalWrite(latchPin, HIGH);
-		stepstowalk--;
-		flag_Left = true;
-		flag_Right= true;
-		delay(2);
+			digitalWrite(latchPin, LOW);
+			shiftOut(dataPin, clockPin, MSBFIRST, binRight[stepRight] | binLeft[stepLeft]); //envia resultado binÃ¡rio para o shift register
+			digitalWrite(latchPin, HIGH);
+			stepstowalk--;
+			flag_Left = true;
+			flag_Right= true;
+			delay(2);
+		//}	
 	}
 	//Desabilitar bobina para economia de energia
 	disable_coil();
 	return stepstowalk == 0 ? 1 : 0;
 }
+void disable_coil()
+{
+	digitalWrite(latchPin, LOW);
+	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
+	digitalWrite(latchPin, HIGH);
+	#if debug_disable_coil
+		Serial.println("Motores desligados.");
+	#endif
+}
+/*
+=====================================================================================================
+*/
+
 int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
 {  
 	#if debug_alocarMatriz
@@ -681,12 +750,4 @@ int convertAngulo(float _angulo)
 {  
 	return int((e_360 * _angulo) / 360);
 }
-void disable_coil()
-{
-	digitalWrite(latchPin, LOW);
-	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
-	digitalWrite(latchPin, HIGH);
-	#if debug_disable_coil
-		Serial.println("Motores desligados.");
-	#endif
-}
+

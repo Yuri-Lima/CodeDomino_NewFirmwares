@@ -1,0 +1,5 @@
+{
+    "board": "arduino:avr:uno",
+    "port": "COM6",
+    "sketch": "New_Code\\App.ino"
+}

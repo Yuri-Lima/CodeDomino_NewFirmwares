@@ -8,7 +8,8 @@ class button
     
     public:
         button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, int Bot_O);
-        int readbutton();
+        int readbutton(char LQ0);
+        char pressedtime();
 
     private:
         int _Bot_pin;
@@ -18,6 +19,13 @@ class button
         int _Bot_A;
         int _Bot_N;
         int _Bot_O;
-        
-};
+        int buttonState;
+        char LQ0 = '0';
+        bool lastButtonState = LOW;
+        unsigned long lastDebounceTime = 0;
+        unsigned long debounceLongPressed = 2000;
+        unsigned long debounceQuickPressed = 100;
+        long teste = 0;
+        int reading [2];
+};  
 #endif
