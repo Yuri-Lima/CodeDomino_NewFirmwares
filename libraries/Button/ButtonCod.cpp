@@ -3,7 +3,7 @@
 #include "ButtonCod.h"
 
 
-#define debug 1
+#define debug 0
 #define buzzerPin 3
 #define erro_1 10
 #define erro_2 5
@@ -75,7 +75,7 @@ int button::readbutton(char LQ0)
 	}if ((reading  > erro_1) && (reading  < _Bot_D + erro_1) && (LQ0 == 'L'))
 	{
 		option = 7;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif	
@@ -83,7 +83,7 @@ int button::readbutton(char LQ0)
 	else if ((reading  > _Bot_D + erro_1) && (reading  < _Bot_E + erro_2) && (LQ0 == 'L'))
 	{
 		option = 8;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif
@@ -91,7 +91,7 @@ int button::readbutton(char LQ0)
 	else if ((reading  > _Bot_E + erro_1) && (reading  < _Bot_C + erro_2) && (LQ0 == 'L'))
 	{
 		option = 9;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif
@@ -99,7 +99,7 @@ int button::readbutton(char LQ0)
 	else if ((reading  > _Bot_C + erro_1 ) && (reading  < _Bot_A + erro_2) && (LQ0 == 'L'))
 	{
 		option = 10;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif
@@ -107,7 +107,7 @@ int button::readbutton(char LQ0)
 	else if ((reading  > _Bot_A + erro_1) && (reading  < _Bot_N + erro_2) && (LQ0 == 'L'))
 	{
 		option = 11;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif
@@ -115,7 +115,7 @@ int button::readbutton(char LQ0)
 	else if ((reading  > _Bot_N + erro_1) && (reading  < _Bot_O + erro_2) && (LQ0 == 'L'))
 	{
 		option = 12;
-		buzzer.fineBeep();
+		buzzer.soundOk();
 		#if debug
 			Serial.println(option);
 		#endif
@@ -141,11 +141,12 @@ char button::pressedtime()
 			{
     			// if the current state is HIGH then the button went from off to on:
     			LQ0 = 'Q';
+				delay(10);
 				#if debug
     				Serial.print("Rapido");Serial.print(" - ");Serial.println(reading);
 				#endif	
 				flag = true;
-				buzzer.Beep();
+				buzzer.Beeplong();
   	  		}
     		// Delay a little bit to avoid bouncing
     		delay(2);
@@ -162,7 +163,7 @@ char button::pressedtime()
 				Serial.println("Longo");
 			#endif
 			flag2 = false;
-			buzzer.Beep();
+			buzzer.Beeplong();
 		}
 		lastButtonState = buttonState;
 	}

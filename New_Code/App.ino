@@ -102,6 +102,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
 #define debug_setup 1 
+#define debug_loop 1
 #define debug_rfid 0
 #define debug_logicflow 0
 #define debug_runflow 0
@@ -236,19 +237,15 @@ void loop()
 	//===================================================================================================
 	if (millisAtual % timer_B == 0)
 	{
-		//if(flag_button)
-		//{ 
 			char LQ0 = optionPin.pressedtime(); 
-			Serial.print(LQ0);Serial.print(" - ");
+			#if debug_loop
+				//Serial.print("TQ - Quick / L - Long: ");Serial.print(LQ0);Serial.print(" - ");
+			#endif
 			if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
-			Serial.println(option);
-			//long pressed e quick pressed
-			//if(option != 0)	
-			//{
-			//	flag_button = false;
-		//	}
+			#if debug_loop
+				Serial.print("Option: ");Serial.println(option);
+			#endif
 			delay(2);		
-		//}
 	}
 	//===================================================================================================
 	//Função de leitura RFID para a função logicflow  
@@ -258,17 +255,13 @@ void loop()
 		if((option != 0) && (option == 1))
 		{
 			delay(5);
-			//if((callback_end_logicflow) && (!callback_end_sonic)) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
+			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
 			
-			//if(callback_end_walk == 0)
-			//{
-			//flag_button = true;
-			//	option = 0;
-			//}
+			if(callback_end_walk == 2) option = 0;
 
 			callback_read_rfid = readRfid();
 
-			if(callback_read_rfid && (!callback_end_sonic))
+			if(callback_read_rfid)
 			{
 				callback_end_logicflow = logicflow(callback_read_rfid);
 				if(!callback_end_logicflow)
@@ -569,7 +562,7 @@ bool  shapes(int edro)
 	}
 	return callback;    
 }
-bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
+int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 { 	 /*
 		0 --> Parado, 1 --> frente , -1 --> tras
 		Essa função faz todo controle da execução de passos, seja qualquer for a direção, até mesmo curvas. 
@@ -597,6 +590,7 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	bool callback_end_sonic = false, flag_button = true;
 	float U_sonic =0.00, detected_min = 4.00,detected_max = 15.00;*/
 	//==============================================================
+	short int option = 0, callback_end_walk = 1;
 	bool flag_Left = true, flag_Right=true, flag_button = true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
 	int stepLeft = 3, stepRight = 3;//Faz o fluxo step binario 
 	byte binLeft[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
@@ -606,7 +600,14 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	while (stepstowalk > 0)
 	{
 		char LQ0 = optionPin.pressedtime();
-		if(LQ0 == 'L') return 0; 
+		if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
+		if(option == 1 || option == 7)
+		{
+			stepstowalk = 0; 
+			callback_end_walk = 2;
+			disable_coil();
+			return callback_end_walk;
+		}
 		//==============================================================
 		//Bloco de verificação de distancia, ainda em testes
 		/*
@@ -685,6 +686,8 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			shiftOut(dataPin, clockPin, MSBFIRST, binRight[stepRight] | binLeft[stepLeft]); //envia resultado binÃ¡rio para o shift register
 			digitalWrite(latchPin, HIGH);
 			stepstowalk--;
+			if(stepstowalk ==0)callback_end_walk = 1;
+			else callback_end_walk = 0;
 			flag_Left = true;
 			flag_Right= true;
 			delay(2);
@@ -692,7 +695,7 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	}
 	//Desabilitar bobina para economia de energia
 	disable_coil();
-	return stepstowalk == 0 ? 1 : 0;
+	return callback_end_walk;
 }
 void disable_coil()
 {

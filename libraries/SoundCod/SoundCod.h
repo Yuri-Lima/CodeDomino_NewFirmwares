@@ -12,6 +12,7 @@ class sound
         void error();
         void Beep();
         void fineBeep();
+        void Beeplong();
         void soundOk();
         void soundEnd();
         void soundRecording();

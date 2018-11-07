@@ -46,6 +46,12 @@ void sound::fineBeep()
 	delay(30);
 	noTone(_buzzer);
 }
+void sound::Beeplong()
+{
+	tone(_buzzer, 1047, 500);
+	delay(100);
+	noTone(_buzzer);
+}
 void sound::soundOk()
 {
 	tone(_buzzer, 440, 200);
