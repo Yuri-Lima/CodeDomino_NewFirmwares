@@ -117,12 +117,12 @@ sound buzzer(buzzer_pin);//Aqui já é algo relacionado a lib SoundCod.h
 //=========================================================================================
 //Valor de cada leitura dos botões personalizados de acordo com o nome do modelo (DECANO)
 #define Bot_Pin A0
-#define Bot_D 709
-#define Bot_E 761
-#define Bot_C 822
-#define Bot_A 894
-#define Bot_N 977
-#define Bot_O 1050
+#define Bot_D 670
+#define Bot_E 727
+#define Bot_C 784
+#define Bot_A 850
+#define Bot_N 928
+#define Bot_O 1020
 button optionPin(Bot_Pin, Bot_D, Bot_E, Bot_C, Bot_A, Bot_N, Bot_O); //Aqui já é algo relacionado a lib ButtonCod.h
 //=========================================================================================
 //Valor das peças para orientação
@@ -149,7 +149,7 @@ const int SS_PIN  = 10;
 short int amount_Parts = 0;
 //=========================================================================================
 //Função Loop
-const int timer_B = 100;     //Timer Botão
+const int timer_B = 10;     //Timer Botão
 const int timer_R = 500;  	//Timer RFID
 const int timer_F = 1000;  //Timer  shapes Geometricas
 const int timer_S = 1500; // Timer Ultrassonic
@@ -225,24 +225,31 @@ void setup()
 
 void loop()
 {	 
-	static short int option = 0, linha = 0, coluna = 0;
+	static short int option = 0, linha = 0, coluna = 0, callback_end_walk = 0;
 	float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
-				flag_button = true,callback_end_walk = false, callback_end_sonic = false;	
+				flag_button = true, callback_end_sonic = false;
+	//===================================================================================================	
+	millisAtual = millis();			
 	//===================================================================================================
 	//Função ler Botão com return da opção
 	//===================================================================================================
 	if (millisAtual % timer_B == 0)
 	{
-		char LQ0 = optionPin.pressedtime(); 
-		if(LQ0 != '0') optionPin.readbutton(LQ0);
-		if(flag_button)  //long pressed e quick pressed
-		if(option != 0)	
-		{
-			flag_button = false;
-		}
-		delay(2);		
-	}	
+		//if(flag_button)
+		//{ 
+			char LQ0 = optionPin.pressedtime(); 
+			Serial.print(LQ0);Serial.print(" - ");
+			if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
+			Serial.println(option);
+			//long pressed e quick pressed
+			//if(option != 0)	
+			//{
+			//	flag_button = false;
+		//	}
+			delay(2);		
+		//}
+	}
 	//===================================================================================================
 	//Função de leitura RFID para a função logicflow  
 	//===================================================================================================
@@ -250,8 +257,14 @@ void loop()
 	{
 		if((option != 0) && (option == 1))
 		{
-			delay(50);
-			if((callback_end_logicflow) && (!callback_end_sonic))callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça
+			delay(5);
+			//if((callback_end_logicflow) && (!callback_end_sonic)) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
+			
+			//if(callback_end_walk == 0)
+			//{
+			//flag_button = true;
+			//	option = 0;
+			//}
 
 			callback_read_rfid = readRfid();
 
@@ -265,23 +278,25 @@ void loop()
 				} 
 			}
 		}
-		callback_read_rfid = 0;//Para controle real de retorno da função readRfid. 
+		callback_read_rfid = false;//Para controle real de retorno da função readRfid. 
 	}
-		//===================================================================================================
+	//===================================================================================================
 	//Para executação da função shapes ou runflow
 	//===================================================================================================
-	millisAtual = millis();
 	if (millisAtual % timer_F == 0 )
 	{
 		if ((option != 0) && (option != 1))
 		{ 	
-			delay(2000);
-			shapes(option);
+			//delay(2000);
+			//shapes(option);
 			if(option == 3) 
 			callback_end_runflow = runflow();
-			if(callback_end_runflow) buzzer.soundOk();
-			flag_button = true;	
-			option = 0;	
+			if(callback_end_runflow)
+			{
+				buzzer.soundOk();
+				flag_button = true;	
+				option = 0;	
+			}
 		}
 	}
 	/*	
@@ -590,6 +605,8 @@ bool  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	if(_Left == 0) flag_Left = false;//Stop
 	while (stepstowalk > 0)
 	{
+		char LQ0 = optionPin.pressedtime();
+		if(LQ0 == 'L') return 0; 
 		//==============================================================
 		//Bloco de verificação de distancia, ainda em testes
 		/*
@@ -689,7 +706,6 @@ void disable_coil()
 /*
 =====================================================================================================
 */
-
 int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colunas como ParÃ¢metro
 {  
 	#if debug_alocarMatriz
@@ -745,7 +761,6 @@ void desalocarMatriz(int **m, int Linhas)
 		#endif
 	}
 }
-
 int convertAngulo(float _angulo)
 {  
 	return int((e_360 * _angulo) / 360);

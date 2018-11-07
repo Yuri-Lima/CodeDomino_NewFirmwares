@@ -3,9 +3,9 @@
 #include "Arduino.h"
 #include "SoundCod.h"
 
+
 class button
 {
-    
     public:
         button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, int Bot_O);
         int readbutton(char LQ0);
@@ -23,9 +23,8 @@ class button
         char LQ0 = '0';
         bool lastButtonState = LOW;
         unsigned long lastDebounceTime = 0;
-        unsigned long debounceLongPressed = 2000;
-        unsigned long debounceQuickPressed = 100;
-        long teste = 0;
-        int reading [2];
+        unsigned long debounceLongPressed = 1000;
+        unsigned long debounceQuickPressed = 10;
+        int reading;
 };  
 #endif
