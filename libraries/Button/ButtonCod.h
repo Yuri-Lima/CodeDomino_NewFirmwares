@@ -7,20 +7,14 @@
 class button
 {
     public:
-        button(int pin, int Bot_D, int Bot_E, int Bot_C, int Bot_A, int Bot_N, int Bot_O);
-        int readbutton(char LQ0);
+        button(int* pin, int* Bot_D, int* Bot_E, int* Bot_C, int* Bot_A, int* Bot_N, int* Bot_O);
+        int readbutton(char _LQ0);//L-->Long Pressed //Q-->Quick Pressed
         char pressedtime();
 
     private:
-        int _Bot_pin;
-        int _Bot_D;
-        int _Bot_E;
-        int _Bot_C;
-        int _Bot_A;
-        int _Bot_N;
-        int _Bot_O;
+        int* _Bot_pin, _Bot_D, _Bot_E, _Bot_C, _Bot_A, _Bot_N, _Bot_O;
+        char LQ0 = '0';//L-->Long Pressed //Q-->Quick Pressed
         int buttonState;
-        char LQ0 = '0';
         bool lastButtonState = LOW;
         unsigned long lastDebounceTime = 0;
         unsigned long debounceLongPressed = 1000;

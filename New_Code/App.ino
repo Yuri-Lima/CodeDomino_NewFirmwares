@@ -8,6 +8,7 @@
 */
 #include <SoundCod.h> //Lib CodeDomino
 #include <ButtonCod.h> //Lib CodeDomino
+#include <RecordFlash.h>
 //Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
 //=====================================================================================================
 //Include de libs convencionais
@@ -16,7 +17,7 @@
 #include <MFRC522.h> //Version 1.3.6
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
-#include <Ultrassonic.h>
+#include <Ultrasonic.h>
 
 /*
 	Fontes de estudos
@@ -113,18 +114,18 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #define debug_disable_coil 0
 //=========================================================================================
 //Função Som
-#define buzzer_pin 3
-sound buzzer(buzzer_pin);//Aqui já é algo relacionado a lib SoundCod.h
+const int buzzer_pin = 3;
+sound buzzer(&buzzer_pin);//Aqui já é algo relacionado a lib SoundCod.h
 //=========================================================================================
 //Valor de cada leitura dos botões personalizados de acordo com o nome do modelo (DECANO)
-#define Bot_Pin A0
-#define Bot_D 670
-#define Bot_E 727
-#define Bot_C 784
-#define Bot_A 850
-#define Bot_N 928
-#define Bot_O 1020
-button optionPin(Bot_Pin, Bot_D, Bot_E, Bot_C, Bot_A, Bot_N, Bot_O); //Aqui já é algo relacionado a lib ButtonCod.h
+const int Bot_Pin = 0;
+const int Bot_D = 670;
+const int Bot_E = 727;
+const int Bot_C = 784;
+const int Bot_A = 850;
+const int Bot_N = 928;
+const int Bot_O = 1020;
+button optionPin(&Bot_Pin, &Bot_D, &Bot_E, &Bot_C, &Bot_A, &Bot_N, &Bot_O); //Aqui já é algo relacionado a lib ButtonCod.h
 //=========================================================================================
 //Valor das peças para orientação
 /*
@@ -147,13 +148,14 @@ const int miso =  12;
 const int mosi =  11;
 const int RST_PIN = 9;
 const int SS_PIN  = 10;
-short int amount_Parts = 0;
+int amount_Parts = 0;
 //=========================================================================================
 //Função Loop
-const int timer_B = 10;     //Timer Botão
-const int timer_R = 500;  	//Timer RFID
-const int timer_F = 1000;  //Timer  shapes Geometricas
-const int timer_S = 1500; // Timer Ultrassonic
+const int timer_B = 10;       //Timer Botão
+const int timer_R = 500;  	 //Timer RFID
+const int timer_F = 1000;   //Timer  shapes Geometricas
+const int timer_S = 1500;  // Timer Ultrassonic
+const int timer_R_F = 800;//Recording Flash
 //=========================================================================================
 //Função  walk
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
@@ -163,7 +165,7 @@ const int dataPin = 6; //Pin connected to DS of 74HC595
 //Função  Ultrassonic
 int trig = 5; //ultrasom
 int echo = 4; //ultrasom
-Ultrassonic sonic(trig, echo);
+Ultrasonic sonic(trig, echo);
 //=========================================================================================
 /*
 	Função alocarMatriz e desalocarMatriz --> Apenas para a função Shapes para aloção de fomatos geometricos predefinidos,
@@ -195,7 +197,7 @@ uint8_t pageAddr = 0x06;
 //Função logicflow e runflow
 char instructionBuff[20];
 byte c = 0;
-
+record _record(0);
 
 void setup()
 { 	
@@ -226,10 +228,10 @@ void setup()
 
 void loop()
 {	 
-	static short int option = 0, linha = 0, coluna = 0, callback_end_walk = 0;
+	static short int option = 0, callback_end_walk = 0;
 	float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
-				flag_button = true, callback_end_sonic = false;
+				flag_button = true, callback_end_sonic = false, callback_begin_record = false;
 	//===================================================================================================	
 	millisAtual = millis();			
 	//===================================================================================================
@@ -266,7 +268,6 @@ void loop()
 				callback_end_logicflow = logicflow(callback_read_rfid);
 				if(!callback_end_logicflow)
 				{
-					flag_button = true;
 					option = 0;
 				} 
 			}
@@ -286,23 +287,47 @@ void loop()
 			callback_end_runflow = runflow();
 			if(callback_end_runflow)
 			{
-				buzzer.soundOk();
-				flag_button = true;	
+				buzzer.soundOk();	
 				option = 0;	
 			}
 		}
 	}
-	/*	
-	if (millisAtual % timer_S == 0)
+	//===================================================================================================
+	//Função de Gravação na Flash
+	//===================================================================================================
+	if (callback_begin_record)
 	{
-		U_sonic = sonic.getDistancia(CENTIMETRO);
-		if(U_sonic <= 10) 
-		{
-			callback_end_sonic = true;
-			buzzer.Beep();
-		}
-		else callback_end_sonic = false;	
-	}*/
+
+			#if debug_loop
+				Serial.print("Recording... ");//Serial.print(LQ0);Serial.print(" - ");
+			#endif
+			bool callback_end_record = false;
+			switch (option)
+			{
+				case 7:
+					callback_end_record = false;//gravou? 
+				break;
+				case 8:
+					_record.writeRecord(option, &instructionBuff[0]);
+					//memset(instructionBuff, 0, sizeof(instructionBuff));
+				break;
+				case 9:
+					
+				break;
+				case 10:
+					
+				break;
+				case 11:
+					
+				break;
+				case 12:
+					
+				break;
+				default:
+					break;
+			}
+			delay(2);		
+	}
 }
 /*
 =====================================================================================================
@@ -491,7 +516,7 @@ bool  shapes(int edro)
 			m[3][0] = 1; m[3][1] = -1; m[3][2] = (e_360 * ang) / 360; //angulo que desejamos
 			m[4][0] = 1; m[4][1] = 1; m[4][2] = (r_360 * (cateto_O / tan(ang * (PI/180)))) / C; // cateto adjacente TOA
 			m[5][0] = -1; m[5][1] = 1; m[5][2] = (e_360 * 90) / 360; //Volta na posição que iniciou
-			for(int i = 0;i < 6;i++)
+			for(byte i = 0;i < 6;i++)
 			{	
 				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
@@ -506,9 +531,9 @@ bool  shapes(int edro)
 			m = alocarMatriz(2,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * 10) / C; //linha 1Âª comando
 			m[1][0] = -1; m[1][1] = 1; m[1][2] = (e_360 * ang) / 360; //linha 2Âª comando
-			for(int i = 0;i < 4;i++)
+			for(byte i = 0;i < 4;i++)
 			{  
-				for(int j = 0;j < 2;j++)
+				for(byte j = 0;j < 2;j++)
 				{ 
 					#if debug_shapes
 					Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
@@ -590,7 +615,7 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	bool callback_end_sonic = false, flag_button = true;
 	float U_sonic =0.00, detected_min = 4.00,detected_max = 15.00;*/
 	//==============================================================
-	short int option = 0, callback_end_walk = 1;
+	int option = 0, callback_end_walk = 1;
 	bool flag_Left = true, flag_Right=true, flag_button = true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
 	int stepLeft = 3, stepRight = 3;//Faz o fluxo step binario 
 	byte binLeft[4]= {B10010000, B11000000, B01100000, B00110000};//FullStep
@@ -744,7 +769,7 @@ int** alocarMatriz(int Linhas,int Colunas)//Recebe a quantidade de Linhas e Colu
 }
 void desalocarMatriz(int **m, int Linhas)
 {
-	 short int i;
+	int i;
 	if(m[0][0]!=NULL)
 	{
 		for (i = 0; i < Linhas; i++)

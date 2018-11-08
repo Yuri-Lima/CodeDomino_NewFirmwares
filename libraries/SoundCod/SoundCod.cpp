@@ -1,15 +1,15 @@
 #include "Arduino.h"
 #include "SoundCod.h"
 
-sound::sound(int pin)
+sound::sound(int* pin)
 {
-    pinMode(pin, OUTPUT);
-    _buzzer = pin;
+    pinMode(*pin, OUTPUT);
+    _buzzer = *pin;
 	
 }
 void sound::soundHome()
 {
-	for( short int i=400;i<1000;i++)
+	for(short int i=400;i<1000;i++)
 	{
     	tone(_buzzer, i, 3);
     	delay(3);
@@ -98,5 +98,5 @@ void sound::soundRecording()
 }
 int sound::expotpin()
 {
-	return _buzzer;
+	return *_buzzer;
 }

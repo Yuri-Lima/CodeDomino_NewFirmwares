@@ -8,6 +8,7 @@
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Button",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\SoundCod",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Rfid\\src",
+                "F:\\Arduino\\hardware\\tools\\avr\\avr\\include\\avr",
                 "E:\\Arduino\\hardware\\arduino\\avr\\**"
             ],
             "forcedInclude": [

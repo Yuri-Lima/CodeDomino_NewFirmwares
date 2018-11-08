@@ -7,7 +7,7 @@
 class sound
 {
     public:
-        sound(int pin);//Buzzer
+        sound(int* pin);//Buzzer
         void soundHome();
         void error();
         void Beep();
@@ -19,6 +19,6 @@ class sound
         int expotpin();
         
     private:
-        int _buzzer;
+        int* _buzzer;
 };
 #endif
