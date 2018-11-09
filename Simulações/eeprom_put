@@ -1,0 +1,51 @@
+/***
+    eeprom_put example.
+
+    This shows how to use the EEPROM.put() method.
+    Also, this sketch will pre-set the EEPROM data for the
+    example sketch eeprom_get.
+
+    Note, unlike the single byte version EEPROM.write(),
+    the put method will use update semantics. As in a byte
+    will only be written to the EEPROM if the data is actually
+    different.
+
+    Written by Christopher Andrews 2015
+    Released under MIT licence.
+***/
+
+#include <EEPROM.h>
+
+struct MyObject {
+  char button_D_Buff[20];
+  char button_E_Buff[20];
+  char button_C_Buff[20];
+  char button_A_Buff[20];
+  char button_N_Buff[20];
+  char button_O_Buff[20];
+};
+char instructionBuff[20]= {'s','a','p','o'};
+
+void setup() {
+
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+  MyObject customVar;
+  int eeAddress = 0;
+  strcpy(customVar.button_D_Buff, instructionBuff);
+  strcpy(customVar.button_E_Buff, instructionBuff);
+  strcpy(customVar.button_C_Buff, instructionBuff);
+  strcpy(customVar.button_A_Buff, instructionBuff);
+  strcpy(customVar.button_N_Buff, instructionBuff);
+  strcpy(customVar.button_O_Buff, instructionBuff);
+  eeAddress += sizeof(instructionBuff); //Move address to the next byte after float 'f'.
+
+  EEPROM.put(eeAddress, customVar);
+  Serial.print("Written custom data type! \n\nView the example sketch eeprom_get to see how you can retrieve the values!");
+}
+
+void loop() {
+  /* Empty loop */
+}
