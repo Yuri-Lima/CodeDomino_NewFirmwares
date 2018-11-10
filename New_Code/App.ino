@@ -103,7 +103,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
 #define debug_setup 1 
-#define debug_loop 1
+#define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
 #define debug_runflow 0
@@ -295,37 +295,17 @@ void loop()
 	//===================================================================================================
 	//Função de Gravação na Flash
 	//===================================================================================================
-	if (callback_begin_record)
+	if (callback_begin_record || option == 2 || option == 7 || option == 8 || option == 4)
 	{
 
 			#if debug_loop
 				Serial.print("Recording... ");//Serial.print(LQ0);Serial.print(" - ");
 			#endif
+
+			_record.writeRecord(option, instructionBuff);
+			option = 0;
 			bool callback_end_record = false;
-			switch (option)
-			{
-				case 7:
-					callback_end_record = false;//gravou? 
-				break;
-				case 8:
-					_record.writeRecord(option, &instructionBuff[0]);
-					//memset(instructionBuff, 0, sizeof(instructionBuff));
-				break;
-				case 9:
-					
-				break;
-				case 10:
-					
-				break;
-				case 11:
-					
-				break;
-				case 12:
-					
-				break;
-				default:
-					break;
-			}
+			
 			delay(2);		
 	}
 }

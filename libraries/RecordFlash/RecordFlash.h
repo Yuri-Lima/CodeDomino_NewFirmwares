@@ -4,7 +4,17 @@
 #include <EEPROM.h> 
 #include "SoundCod.h"
 
-extern int baz;
+extern int adress;
+const int size_buffer = 20;
+struct MyObject 
+{
+    char button_D_Buff[size_buffer];
+    char button_E_Buff[size_buffer];
+    char button_C_Buff[size_buffer];
+    char button_A_Buff[size_buffer];
+    char button_N_Buff[size_buffer];
+    char button_O_Buff[size_buffer];
+};
 class record
 {
     public:
@@ -12,8 +22,10 @@ class record
         bool writeRecord(int option, char *instructionBuff);
         bool readRecord();
     private:
-        void EEPROM_writeMany(unsigned addressOffset, char* array, unsigned size);
-        void EEPROM_readMany(unsigned addressOffset, char* array, unsigned size);
-        int _adress;
+        void EEPROM_writeMany(unsigned addressOffset, MyObject *array);
+        void EEPROM_readMany(unsigned addressOffset, MyObject *array);
+        int _eeAddress;
+        int option;        
+        
 };
 #endif
