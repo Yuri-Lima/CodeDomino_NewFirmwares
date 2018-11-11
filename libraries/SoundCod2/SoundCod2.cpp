@@ -5,11 +5,14 @@
 #include "WProgram.h"
 #include <pins_arduino.h>
 #endif
+#include "SoundCod2.h"
 
+//const int buzzer_pin = 3;
 
-#include "Cod_sounds.h"
+SoudCod2::SoudCod2(bool pin)
+{ }
 
-void Otto::sing(int songName)
+void SoudCod2::sing(int songName)
 {
     switch(songName)
     {
@@ -101,4 +104,37 @@ void Otto::sing(int songName)
             bendTones(4000, 3000, 1.02, 2, 20);
         break;
     }
+}
+void SoudCod2::_tone (float noteFrequency, long noteDuration, int silentDuration){
+
+    // tone(10,261,500);
+    // delay(500);
+
+    if(silentDuration==0){silentDuration=1;}
+
+    tone(buzzer_pin2, noteFrequency, noteDuration);
+    delay(noteDuration);       //milliseconds to microseconds
+    //noTone(PIN_Buzzer);
+    delay(silentDuration);     
+}
+void SoudCod2::bendTones (float initFrequency, float finalFrequency, float prop, long noteDuration, int silentDuration){
+
+  //Examples:
+  //  bendTones (880, 2093, 1.02, 18, 1);
+  //  bendTones (note_A5, note_C7, 1.02, 18, 0);
+
+  if(silentDuration==0){silentDuration=1;}
+
+  if(initFrequency < finalFrequency)
+  {
+      for (int i=initFrequency; i<finalFrequency; i=i*prop) {
+          _tone(i, noteDuration, silentDuration);
+      }
+
+  } else{
+
+      for (int i=initFrequency; i>finalFrequency; i=i/prop) {
+          _tone(i, noteDuration, silentDuration);
+      }
+  }
 }

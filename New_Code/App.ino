@@ -9,6 +9,7 @@
 #include <SoundCod.h> //Lib CodeDomino
 #include <ButtonCod.h> //Lib CodeDomino
 #include <RecordFlash.h>
+#include <SoundCod2.h>
 //Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
 //=====================================================================================================
 //Include de libs convencionais
@@ -120,6 +121,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 //Função Som
 const int buzzer_pin = 3;
 sound buzzer(&buzzer_pin);//Aqui já é algo relacionado a lib SoundCod.h
+SoudCod2 buzzer2(0);
 //=========================================================================================
 //Valor de cada leitura dos botões personalizados de acordo com o nome do modelo (DECANO)
 const int Bot_Pin = 0;
@@ -227,6 +229,7 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
+	buzzer2.sing(S_connection);
 	//buzzer.soundHome();
 }
 
@@ -254,7 +257,7 @@ void loop()
 			delay(2);		
 	}
 	//===================================================================================================
-	//Função de leitura RFID para a função logicflow  
+	//Função de leitura RFID para a função logicflow //Monta os blocos logicos 
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
@@ -278,7 +281,7 @@ void loop()
 		}
 	}
 	//===================================================================================================
-	//Para executação da função shapes ou runflow
+	//Para executação da função shapes ou runflow //Executa os blocos logicos
 	//===================================================================================================
 	if (millisAtual % timer_F == 0 )
 	{
@@ -296,7 +299,7 @@ void loop()
 		}
 	}
 	//===================================================================================================
-	//Função de Gravação na Flash
+	//Função de Gravação na Flash // Grava os blocos logicos
 	//===================================================================================================
 	if (option != 0 && option != 1)
 	{
@@ -305,6 +308,7 @@ void loop()
 				Serial.print("Recording... ");//Serial.print(LQ0);Serial.print(" - ");
 			#endif
 			_record.Record(option, instructionBuff);
+			Serial.println(instructionBuff);
 			option = 0;
 			delay(2);		
 	}

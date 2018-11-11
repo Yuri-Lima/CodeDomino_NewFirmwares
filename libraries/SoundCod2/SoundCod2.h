@@ -1,5 +1,5 @@
-#ifndef Cod_sounds_h
-#define Cod_sounds_h
+#ifndef SoundCod2_h
+#define SoundCod2_h
 
 #define  note_C0  16.35  //C0
 #define  note_Db0 17.32  //C#0/Db0
@@ -126,7 +126,11 @@
 class SoudCod2
 {
     public:
+        SoudCod2(bool pin);
         void sing(int songName);
+        void _tone (float noteFrequency, long noteDuration, int silentDuration);
+        void bendTones (float initFrequency, float finalFrequency, float prop, long noteDuration, int silentDuration);
+        const int buzzer_pin2 =3;
 };
 
 #endif
