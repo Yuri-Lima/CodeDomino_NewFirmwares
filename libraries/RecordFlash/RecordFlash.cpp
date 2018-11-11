@@ -1,4 +1,10 @@
+#if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
+#else
+#include "WProgram.h"
+#include <pins_arduino.h>
+#endif
+
 #include <EEPROM.h> 
 #include "SoundCod.h"
 #include "RecordFlash.h"
@@ -9,7 +15,10 @@ Conteudo estudado
     https://www.arduino.cc/en/Tutorial/EEPROMGet
     https://www.arduino.cc/en/Tutorial/EEPROMPut
 */
-
+#define debug_record 0
+#define debug_record_cases_read 0
+#define debug_record_cases_write 1
+const int buzzer_pin = 3;
 MyObject customVar;//CRIA O OBJETO QUE CHAMA OS VETORES DE CADA BOTÃO DA STRUCT
 
 record::record(int adress)
@@ -17,88 +26,119 @@ record::record(int adress)
 	_eeAddress = adress;
     _eeAddress += sizeof(customVar.button_D_Buff); //Move o endereço a cara tamanho do vetor button_D_Buff, GENERICA.
 }
-bool record::writeRecord(int option, char *instructionBuff)
+int record::Record(int option, char *instructionBuff)
 {
+    sound buzzer(&buzzer_pin);
     switch (option)
 	{
+        /*
+        1° Faixa de opções pressionado curto
+        */
         case 1:
+            return 1;
         break;
         case 2:
-            EEPROM_readMany(sizeof(customVar.button_E_Buff), &customVar);
+            EEPROM.get(20, customVar.button_E_Buff);
             strcpy(instructionBuff, customVar.button_E_Buff);
-            Serial.print("EEPROM_readMany: ");
+            #if debug_record_cases_read
+            Serial.print("EEPROM_read_Button_E: ");
             Serial.println(instructionBuff);
+            #endif
         break;
         case 3:
+            EEPROM.get(40, customVar.button_C_Buff);
+            strcpy(instructionBuff, customVar.button_C_Buff);
+            #if debug_record_cases_read
+            Serial.print("EEPROM_read_Button_C: ");
+            Serial.println(instructionBuff);
+            #endif
         break;
         case 4:
-            memset(instructionBuff, 0, sizeof(instructionBuff));
-            Serial.print("EEPROM_readMany_instructionBuff: ");
+            EEPROM.get(60, customVar.button_A_Buff);
+            strcpy(instructionBuff, customVar.button_A_Buff);
+            #if debug_record_cases_read
+            Serial.print("EEPROM_read_Button_A: ");
             Serial.println(instructionBuff);
+            #endif
         break;
         case 5:
+            EEPROM.get(80, customVar.button_N_Buff);
+            strcpy(instructionBuff, customVar.button_N_Buff);
+            #if debug_record_cases_read
+            Serial.print("EEPROM_read_Button_N: ");
+            Serial.println(instructionBuff);
+            #endif
         break;
         case 6:
+            EEPROM.get(100, customVar.button_O_Buff);
+            strcpy(instructionBuff, customVar.button_O_Buff);
+            #if debug_record_cases_read
+            Serial.print("EEPROM_read_Button_O: ");
+            Serial.println(instructionBuff);
+            #endif
         break;
-		case 7:
-            for (int i = 0 ; i < EEPROM.length() ; i++) EEPROM.write(i, 0); Serial.println("EEPROM Apagada");
+        /*
+        2° Faixa de opções pressionado longo
+        */
+        case 7://Correspondecia com button 1
+            for (int i = 0 ; i < EEPROM.length() ; i++) 
+            EEPROM.write(i, 0); 
+            buzzer.soundEnd(); 
+            #if debug_record_cases_write
+            Serial.println("EEPROM Apagada");
+            Serial.print("EEPROM_write_Button_D: ");
+            #endif
 		break;
-		case 8:
-            Serial.println("customVar.buttons: ");
-			strcpy(customVar.button_D_Buff, instructionBuff);
+		case 8://Correspondecia com button 2
             strcpy(customVar.button_E_Buff, instructionBuff);
-            strcpy(customVar.button_C_Buff, instructionBuff);
-            strcpy(customVar.button_A_Buff, instructionBuff);
-            strcpy(customVar.button_N_Buff, instructionBuff);
-            strcpy(customVar.button_O_Buff, instructionBuff);
-            Serial.println(customVar.button_D_Buff);
-            Serial.println(customVar.button_E_Buff);
-            Serial.println(customVar.button_C_Buff);
-            Serial.println(customVar.button_A_Buff);
-            Serial.println(customVar.button_N_Buff);
-            Serial.println(customVar.button_O_Buff);
-            EEPROM_writeMany(sizeof(customVar.button_E_Buff), &customVar);
+            EEPROM.put(20, customVar.button_E_Buff);
+            delay(500);
+            buzzer.soundRecording();
+            #if debug_record_cases_write
+            Serial.print("EEPROM_write_Button_E: ");
+            #endif
 		break;
-		case 9:
-	
+		case 9://Correspondecia com button 3
+            strcpy(customVar.button_C_Buff, instructionBuff);
+            EEPROM.put(40, customVar.button_C_Buff);
+            delay(500);
+            buzzer.soundRecording();
+            #if debug_record_cases_write
+            Serial.print("EEPROM_write_Button_C: ");
+            #endif
     	break;
 		case 10:
-			
+			strcpy(customVar.button_A_Buff, instructionBuff);
+            EEPROM.put(60, customVar.button_A_Buff);
+            delay(500);
+            buzzer.soundRecording();
+            #if debug_record_cases_write
+            Serial.print("EEPROM_write_Button_A: ");
+            #endif
 		break;
 		case 11:
-					
+			strcpy(customVar.button_N_Buff, instructionBuff);
+            EEPROM.put(80, customVar.button_N_Buff);
+            delay(500);
+            buzzer.soundRecording();
+            #if debug_record_cases_write
+            Serial.print("EEPROM_write_Button_N: ");
+            #endif	
 		break;
 		case 12:
-					
+			strcpy(customVar.button_O_Buff, instructionBuff);
+            EEPROM.put(100, customVar.button_O_Buff);
+            delay(500);
+            buzzer.soundRecording();
+            #if debug_record_cases_write
+            Serial.print("EEPROM_write_Button_O: ");
+            #endif
 		break;
 		default:
-	
+	        
     	break;
 	}
-	return 1;
-}
-void record::EEPROM_writeMany(unsigned addressOffset, MyObject *customVar) 
-{
-    EEPROM.put(addressOffset, customVar);
-    Serial.println("EEPROM PUT");
-    Serial.print("addressOffset: ");
-    Serial.println(addressOffset);
-    Serial.print("customVar: ");
-    Serial.println(customVar->button_E_Buff);
-    for (int i = 0; i < addressOffset; ++i)
-+        EEPROM.update(addressOffset+i, customVar->button_E_Buff);
-}
-void record::EEPROM_readMany(unsigned addressOffset, MyObject *customVar) 
-{
-    for (int i = 0; i < addressOffset; ++i)
-+        EEPROM.read(addressOffset+i);
-    Serial.println("EEPROM GET");
-    Serial.println(customVar->button_D_Buff);
-    Serial.println(customVar->button_E_Buff);
-    Serial.println(customVar->button_C_Buff);
-    Serial.println(customVar->button_A_Buff);
-    Serial.println(customVar->button_N_Buff);
-    Serial.println(customVar->button_O_Buff);
+	return 0;
 }
 
 

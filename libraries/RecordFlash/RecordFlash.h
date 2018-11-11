@@ -19,11 +19,9 @@ class record
 {
     public:
         record(int adress);
-        bool writeRecord(int option, char *instructionBuff);
+        int Record(int option, char *instructionBuff);
         bool readRecord();
     private:
-        void EEPROM_writeMany(unsigned addressOffset, MyObject *array);
-        void EEPROM_readMany(unsigned addressOffset, MyObject *array);
         int _eeAddress;
         int option;        
         
