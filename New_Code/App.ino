@@ -17,7 +17,7 @@
 #include <MFRC522.h> //Version 1.3.6
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
-#include <Ultrasonic.h>
+#include <Ultrassonic.h>
 
 /*
 	Fontes de estudos
@@ -76,6 +76,10 @@
 	O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações. Recomendado >= 0.01
 
 	Detalhes importantes, tudo que for relacionado a movimentos de curva usamos e_360 e em linha reta r_360.
+*/
+//==================================================================================================================
+/*
+	Não deixa salva a logica de blocos em outro botão.
 */
 //==================================================================================================================
 //Etapa 1 - Motor
@@ -165,7 +169,7 @@ const int dataPin = 6; //Pin connected to DS of 74HC595
 //Função  Ultrassonic
 int trig = 5; //ultrasom
 int echo = 4; //ultrasom
-Ultrasonic sonic(trig, echo);
+Ultrassonic sonic(trig, echo);
 //=========================================================================================
 /*
 	Função alocarMatriz e desalocarMatriz --> Apenas para a função Shapes para aloção de fomatos geometricos predefinidos,
@@ -254,7 +258,7 @@ void loop()
 	//===================================================================================================
 	if (millisAtual % timer_R == 0)
 	{
-		if((option != 0) && (option == 1))
+		if(option == 1)
 		{
 			delay(5);
 			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
@@ -272,14 +276,13 @@ void loop()
 				} 
 			}
 		}
-		callback_read_rfid = false;//Para controle real de retorno da função readRfid. 
 	}
 	//===================================================================================================
 	//Para executação da função shapes ou runflow
 	//===================================================================================================
 	if (millisAtual % timer_F == 0 )
 	{
-		if ((option != 0) && (option != 1))
+		if ((option > 1) && (option < 7))
 		{ 	
 			//delay(2000);
 			//shapes(option);
@@ -295,17 +298,14 @@ void loop()
 	//===================================================================================================
 	//Função de Gravação na Flash
 	//===================================================================================================
-	if (callback_begin_record || option == 2 || option == 7 || option == 8 || option == 4)
+	if (option != 0 && option != 1)
 	{
 
 			#if debug_loop
 				Serial.print("Recording... ");//Serial.print(LQ0);Serial.print(" - ");
 			#endif
-
-			_record.writeRecord(option, instructionBuff);
+			_record.Record(option, instructionBuff);
 			option = 0;
-			bool callback_end_record = false;
-			
 			delay(2);		
 	}
 }
