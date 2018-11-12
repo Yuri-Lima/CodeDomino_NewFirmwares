@@ -8,6 +8,7 @@
 	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ ---> RFID
 	https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
 	https://youtu.be/zzHcsJDV3_o --> Encoder incremental - animação
+	https://www.automalabs.com.br/como-medir-a-tensao-de-alimentacao-do-arduino/ --> Nivel de bateria
 	Conteudo: Trigonometria Ângulos notávei SOH CAH TOA
 	Lista estudada:
 	https://youtu.be/TjC3F9sj-x0
