@@ -2,16 +2,11 @@
 //Programa : Code Dominó
 //Autor : Daniel Chagas / Patrick / Yuri Lima
 //=====================================================================================================
-/*
-	Include de libs novas
-	Ao final a ideia é termos modulos de libs, para posterior inclusão em uma lib_master
-*/
 #include <SoundCod.h> //Lib CodeDomino
 #include <ButtonCod.h> //Lib CodeDomino
 #include <RecordFlash.h>
 #include <SoundCod2.h> //--> Lincena de uso https://creativecommons.org/licenses/by-sa/4.0/  --> https://github.com/OttoDIY/DIY
 #include <BatLevelCod.h>
-//Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
 //=====================================================================================================
 //Include de libs convencionais
 #include <SPI.h>
@@ -21,69 +16,6 @@
 #include <require_cpp11.h>
 #include <Ultrassonic.h>
 
-/*
-	Fontes de estudos
-	O.B.S.:Criar botÃ£o reset diretamente da placa arduino, sempre que houver necessidade de parar a execuÃ§Ã£o de qualquer bug
-	https://www.thingiverse.com/thing:862438/files ---> roda 3D usada
-	https://wakatime.com/projects ---> Medição de tempo de programação, para futuros relatorios
-	https://youtu.be/B86nqDRskVU ---> Mecanismo de redução do motor
-	https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/ ---> RFID
-	https://youtu.be/g2Tco_v73Pc ---> AlocaÃ§Ã£o dinamica
-	https://youtu.be/zzHcsJDV3_o --> Encoder incremental - animação
-*/
-//==================================================================================================================
-/*
-	Consumo do CodeDomino
-		De acordo com os testes realizados até o dia 25/10/2018 as 23:07, o consumo apresentado é de ~95mA parado,
-		ou seja, esperando receber alguma comando.
-		Após receber comandos, seu consumo varia a depender a executação das bobinas, no geral, podemos dizer que
-		o consumo minimo em funcionamento é de 495mA e maximo de 700mA que ocorre ao final de percusso, uma especie
-		de pico, mais posterior é realizar o desligamento das bobinas, voltando ao seu consumo base de ~95mA.
-		Portando uma bateria Lipo 2S de 1300mAh tem uma autonomia de acordo com teste realizados de aproximadamente
-		4 horas de atividades. 
-		O.B.S.: Esse periodo de consumo ainda terá que sermais bem avaliado, pois essa informações é apenas uma ideia,
-		levando em consideração as experiencias que tivier no dercorrer atual dos testes.
-		Tampo de consumo parado: Lipo 1000mAh--> 1 / 0,095 = 10.526 * 60min = 631 minutos ou 10 horas parado.
-		Tampo de consumo em funcionamento: Lipo 1000mAh--> 1 / 0,5 = 2 * 60min = 120 minutos ou 2 horas.
-*/
-//==================================================================================================================
-/*
-	--> Possiveis questionamentos <--
-	(Quantos passos para a roda fazer 360º?) --> Etapa 2
-	((Quantos passos para o CARRO fazer 360º?)) --> Etapa 4
-
-	Etapa 1 - Motor
-	1º Modelo do motor de passo, para saber quantos graus por passo. 
-	2º Vamos dividir 360° por graus para obter quantos passos são necessários para 360°.
-	O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações.
-	_____________________________________________________________________________________________
-	| http://robocraft.ru/files/datasheet/28BYJ-48.pdf 
-	| Exemplos: (FullStep = 11,25° / 64 => 0.1757°) Motor de Passo 28BYJ-48                        |
-	| Exemplos: 1Step = 5.625 --> FullStep = 2 * 5.625° => 11,25° ---> 360 / 0.1757° ---> p' = 2000 Passos |
-	---------------------------------------------------------------------------------------------
-	Etapa 2 - Roda                                  
-	1º Precisamos das informações do diametro da RODA para obter o RAIO.
-	2º Na formula C"=2*PI*r vamos obter a distancia percorrida em 360°.
-
-	Etapa 3 - Carro
-	1º Precisamos das informações do diametro entre as duas rodas, para obter o RAIO.
-	2º Na formula C'=2*PI*r vamos obter a distancia percorrida em 360°, ou seja, no seu proprio eixo.
-
-	Etapa 4 - Revoluções                   
-	1º voltas = C" / C' Quantas voltas a roda do carro terá que fazer para que o carro realizar 360° em seu proprio eixo.
-
-	Etapa 5 - Passos 
-	1º P" = p' * voltas Em P" vamos obter a quantidade de passos para 360°
-
-	O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações. Recomendado >= 0.01
-
-	Detalhes importantes, tudo que for relacionado a movimentos de curva usamos e_360 e em linha reta r_360.
-*/
-//==================================================================================================================
-/*
-	Não deixa salva a logica de blocos em outro botão.
-*/
-//==================================================================================================================
 //Etapa 1 - Motor
 float GrausPassoDoMotor = 0.1757;
 float m_erro_r = 1.05;
@@ -138,9 +70,7 @@ button optionPin(&Bot_Pin, &Bot_D, &Bot_E, &Bot_C, &Bot_A, &Bot_N, &Bot_O); //Aq
 //Valor das peças para orientação
 /*
 	Nesse projeto inicial, o objetivo é deixar funcionando para nossa primeita categoria (Little Kids), ou seja, 
-	Comandos básicos devem ser implementados. O define Angle, apenas não está em uso, porem ja temos aplicação que envolve 
-	os movimento em curva, pois encontrei uma especie de razão, onde conseguimos mudar o tamanha do raio, assim conseguimos realizar
-	curvas de acordo com angulos especificados, porem identifiquei, que com certeza termos algumas limitação quanto a angulos minimos.
+	Comandos básicos devem ser implementados.
 */	
 #define Start 'S'
 #define End   'E'
@@ -186,12 +116,6 @@ int **m;//Matriz bidimensional
 unsigned long millisAnterior = 0;
 unsigned long millisAtual = 0;
 //=========================================================================================
-/*
-	Instanciação de Objetos RFID
-	In this example we will write/read 16 bytes (page 6,7,8 and 9).
-	Ultraligth mem = 16 pages. 4 bytes per page.  
-	Pages 0 to 4 are for special functions. 
-*/
 MFRC522 mfrc522(SS_PIN, RST_PIN);//Create MFRC522 instance
 MFRC522::StatusCode status;//variable to get card status 
 byte buffer[18]; //data transfer buffer (16+2 bytes data+CRC)
@@ -378,7 +302,6 @@ bool logicflow(bool callback_read_rfid)
 			for(byte x=0; x<i;x++)Serial.print(instructionBuff[x]);
 			Serial.println();
 			#endif
-			//memset(instructionBuff, 0, sizeof(instructionBuff));
 			memset(buffer, 0, sizeof(buffer));
 			i = 0;
 			amount_Parts=0;
@@ -410,7 +333,7 @@ bool runflow()
 				delay(5);	
 			break;
 			case Left:
-				angledSteps = 92.00;
+				angledSteps = 90.00;
 				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("L");
@@ -418,7 +341,7 @@ bool runflow()
 				delay(5);		
 			break;
 			case Right:
-				angledSteps = 92.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				angledSteps = 90.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
 				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("R");
@@ -459,8 +382,6 @@ bool runflow()
 }
 bool readRfid()
 {
-	//short int tam=((sizeof(buffer)-2)/2);
-	//Serial.print(tam);
 	buzzer.Beep();
 	if ( ! mfrc522.PICC_IsNewCardPresent())	return false;
 	if ( ! mfrc522.PICC_ReadCardSerial()) return false;
@@ -517,13 +438,6 @@ bool  shapes(int edro)
 		case 4://Triangulo retangulo 30
 			ang = 30; //escolha o angulo
 			cateto_O = 10;
-			/*
-				Conteudo: Trigonometria Ângulos notávei SOH CAH TOA
-				Lista estudada:
-					https://youtu.be/TjC3F9sj-x0
-					https://www.youtube.com/watch?v=3iHUX_oOcX0
-					https://www.dobitaobyte.com.br/sirene-com-arduino/
-			*/
 			m = alocarMatriz(6,3);//6 linhas e 3 colunas
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (r_360 * cateto_O) / C; //Cateto oposto
 			m[1][0] = 1; m[1][1] = -1; m[1][2] = (e_360 * (90 - ang)) / 360; //complemento de angulo
@@ -574,13 +488,6 @@ bool  shapes(int edro)
 		case 3://Posicionamentos angulare (Circulo)
 			ang = 30; //escolha o angulo
 			cateto_O = 45;
-			/
-				Conteudo: Trigonometria Ângulos notávei SOH CAH TOA
-				Lista estudada:
-					https://youtu.be/TjC3F9sj-x0
-					https://www.youtube.com/watch?v=3iHUX_oOcX0
-					https://www.dobitaobyte.com.br/sirene-com-arduino/
-			/
 			m = alocarMatriz(1,3);//6 linhas e 3 colunas
 			m[2][0] = 1; m[2][1] = 1; m[2][2] = (r_360 * (cateto_O / sin(ang * (PI/180)))) / C;//hipotenusa  SOH
 			for(int i = 0;i < edro*2;i++)
@@ -588,7 +495,7 @@ bool  shapes(int edro)
 				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
 				#endif
-				 walk(m[i][0], m[i][1],  m[i][2], 4, 0);
+				walk(m[i][0], m[i][1],  m[i][2], 4, 0);
 				delay(50);
 			}
 				desalocarMatriz(m,6);
@@ -603,32 +510,12 @@ bool  shapes(int edro)
 	return callback;    
 }
 int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
-{ 	 /*
-		0 --> Parado, 1 --> frente , -1 --> tras
-		Essa função faz todo controle da execução de passos, seja qualquer for a direção, até mesmo curvas. 
-		Como as orientações basicas já nao são um misterio, vou tentar explicar um pouco sobre como tentei recolver
-		o problema da curva, da seguinte forma: 
-		Notei que é preciso uma das rodas dar menos passos que a outra, logico de acordo com a direção, então encontrei uma razão 
-		dada pelo parametro _freqRot, ele é o responsavel, por inibir determidados passos com uma razão entre os passos a caminhar e
-		o resto comparavel a 1, nesse ritimo, ao variar essa divisão, podemos obter acionamentos que variam de 1 passo a cada 2, como
-		1 passo a cada 5 e assim por diante, sendo assim, quanto maior _freqRot, maior sera o tempo de acionamento para 1 passo e o raio 
-		da circunfencia/ curva dimunui, ou seja, é inversamente proporcional. Todos os calculos para realizalçao de movimento circulares, 
-		ou seja, curvas, tem que ser usado como paramentro a variavel, e_360, pois é nela que temos os passos, levando-se em consideração
-		o eixo do carro e todas para seguir em linha reta, seja para tras ou para frente, tem como parametro/variavel r_360.
-		Demais calculos é apenas simples regras 3. Foi usado, na função Shapes case 4, Seno e Tagente, pois para realizar é preciso para
-		criar um Triangulo Retangulo apenas especificando o tipo do triangulo notavel e a medida do cateto opostos, para obter as demais
-		medidas. 
-		Enfim, vi que temos muito coisa a fazer, tanto para uma versão open, como para uma versão comercial mais bem elaborada no sentido (precisão). 
-	*/
+{ 	 
 	#if debug_walk
 	Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
 	#endif
 	//==============================================================
-	//variaveis de verificação de distancia
-	/*unsigned long millisAtual;
-	int timer_S = 100;
-	bool callback_end_sonic = false, flag_button = true;
-	float U_sonic =0.00, detected_min = 4.00,detected_max = 15.00;*/
+	//variaveis de verificação de distancia --> PENDENTE
 	//==============================================================
 	int option = 0, callback_end_walk = 1;
 	bool flag_Left = true, flag_Right=true, flag_button = true;//Aciona um Mecanismo para gerar curvas, com uma razão proporcional.
@@ -648,30 +535,6 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			disable_coil();
 			return callback_end_walk;
 		}
-		//==============================================================
-		//Bloco de verificação de distancia, ainda em testes
-		/*
-		millisAtual = millis();
-		if (millisAtual % timer_S == 0)
-		{
-			U_sonic = sonic.getDistancia(CENTIMETRO);
-			if((U_sonic <= detected_max) && (U_sonic >= detected_min))//range
-			{
-				callback_end_sonic = true;
-				buzzer.Beep();
-			}
-			else callback_end_sonic = false;	
-		}*/
-		//==============================================================
-		//Bloco de verificação de um botão qualquer
-		//if(optionPin.readbutton()) 
-		//{
-			//flag_button = false;
-			//stepstowalk = 0;
-		//}	
-
-		//if(flag_button)
-		//{
 			//================================================================================
 			//Aqui temos como realizar uma curva ou circunfencia
 			if(_freqRot > 0)
