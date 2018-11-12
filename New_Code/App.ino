@@ -9,7 +9,8 @@
 #include <SoundCod.h> //Lib CodeDomino
 #include <ButtonCod.h> //Lib CodeDomino
 #include <RecordFlash.h>
-#include <SoundCod2.h>
+#include <SoundCod2.h> //--> Lincena de uso https://creativecommons.org/licenses/by-sa/4.0/  --> https://github.com/OttoDIY/DIY
+#include <BatLevelCod.h>
 //Pedente criação das libs, da função bool readRfid(), bool walk(), bool shapes().
 //=====================================================================================================
 //Include de libs convencionais
@@ -107,7 +108,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 /*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
-#define debug_setup 1 
+#define debug_setup 0
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
@@ -117,6 +118,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #define debug_alocarMatriz 0
 #define debug_desalocarMatriz 0
 #define debug_disable_coil 0
+#define debug_loop_batery 0
 //=========================================================================================
 //Função Som
 const int buzzer_pin = 3;
@@ -162,6 +164,7 @@ const int timer_R = 500;  	 //Timer RFID
 const int timer_F = 1000;   //Timer  shapes Geometricas
 const int timer_S = 1500;  // Timer Ultrassonic
 const int timer_R_F = 800;//Recording Flash
+const int timer_Batery = 10000;//Recording Flash
 //=========================================================================================
 //Função  walk
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
@@ -202,14 +205,14 @@ uint8_t pageAddr = 0x06;
 */
 //Função logicflow e runflow
 char instructionBuff[20];
-byte c = 0;
 record _record(0);
+//Batery Level
+BatLevelCod BatLevelCod(0);
 
 void setup()
 { 	
 	SPI.begin();
 	mfrc522.PCD_Init();
-
 	#if debug_setup
 	Serial.begin(9600);
 	memcpy(buffer,"X0000000",(size-2)/2);//X para sinalizar inicio de comandos
@@ -221,7 +224,15 @@ void setup()
 	Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (C_): "));    Serial.println(C_);
 	Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO (revol_): "));   Serial.println(revol_);
 	Serial.print(F("Quantos passos para o CARRO rodar no EIXO (e_360): "));   Serial.println(e_360);
+	Serial.print("Tensao: ");
+	Serial.print(BatLevelCod.readVcc(4));//Passe como parametro quantas amostras de leitura deseja.
+	Serial.println("mV");
 	#endif
+	if(BatLevelCod.readVcc(10) < 4600)
+	{
+		buzzer2.sing(S_disconnection);
+		return;
+	}	
 	//===================================================================================================
 	pinMode(latchPin, OUTPUT);
 	pinMode(clockPin, OUTPUT);
@@ -234,13 +245,28 @@ void setup()
 }
 
 void loop()
-{	 
-	static short int option = 0, callback_end_walk = 0;
-	float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
+{
+	static short int option = 0, callback_end_walk = 0, option_runflow = 0;
+	static float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
-				flag_button = true, callback_end_sonic = false, callback_begin_record = false;
-	//===================================================================================================	
-	millisAtual = millis();			
+	flag_button = true, callback_end_sonic = false, callback_begin_runflow = false;
+	millisAtual = millis();
+	//===================================================================================================
+	if (millisAtual % timer_Batery == 0)
+	{	
+		#if debug_loop_batery
+				Serial.print("Batery OK");
+		#endif
+		if(BatLevelCod.readVcc(10) < 4600)
+		{
+			buzzer2.sing(S_disconnection);
+			#if debug_loop_batery
+				Serial.print("Batery Low");
+			#endif
+			delay(4000);
+			buzzer2.sing(S_disconnection);
+		}	
+	}				
 	//===================================================================================================
 	//Função ler Botão com return da opção
 	//===================================================================================================
@@ -254,8 +280,10 @@ void loop()
 			#if debug_loop
 				Serial.print("Option: ");Serial.println(option);
 			#endif
+			callback_begin_runflow = true;
 			delay(2);		
 	}
+	
 	//===================================================================================================
 	//Função de leitura RFID para a função logicflow //Monta os blocos logicos 
 	//===================================================================================================
@@ -276,24 +304,30 @@ void loop()
 				if(!callback_end_logicflow)
 				{
 					option = 0;
+					callback_end_logicflow = true;
+					callback_begin_runflow = true;
 				} 
 			}
 		}
 	}
+	
 	//===================================================================================================
 	//Para executação da função shapes ou runflow //Executa os blocos logicos
 	//===================================================================================================
+	
 	if (millisAtual % timer_F == 0 )
 	{
-		if ((option > 1) && (option < 7))
+		if ((option_runflow  > 1) && (option_runflow < 7) && callback_begin_runflow)
 		{ 	
-			//delay(2000);
+			delay(2000);
 			//shapes(option);
-			if(option == 3) 
+			//if(option == 3) 
 			callback_end_runflow = runflow();
 			if(callback_end_runflow)
 			{
-				buzzer.soundOk();	
+				buzzer2.sing(S_happy);
+				callback_begin_runflow = false;
+				option_runflow = 0;	
 				option = 0;	
 			}
 		}
@@ -309,6 +343,7 @@ void loop()
 			#endif
 			_record.Record(option, instructionBuff);
 			Serial.println(instructionBuff);
+			option_runflow = option;
 			option = 0;
 			delay(2);		
 	}
@@ -319,8 +354,7 @@ void loop()
 bool logicflow(bool callback_read_rfid)
 {	
 	static short int  linha = 0, coluna = 0;
-	static char i = 0;
-	c = 0;				
+	static char i = 0;			
 	if(callback_read_rfid)	
 	{
 		if((char(buffer[0]) == Start) && (amount_Parts == 0))
@@ -346,7 +380,6 @@ bool logicflow(bool callback_read_rfid)
 			#endif
 			//memset(instructionBuff, 0, sizeof(instructionBuff));
 			memset(buffer, 0, sizeof(buffer));
-			c = i;
 			i = 0;
 			amount_Parts=0;
 			return false;
@@ -357,20 +390,14 @@ bool logicflow(bool callback_read_rfid)
 }
 bool runflow()
 {	
-	#if debug_runflow
-		Serial.print("Quantos passos: ");
-		Serial.println(c);
-	#endif
 	byte p = 0;
 	bool callback = false;
 	float stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
-	while(p < c)
+	while(instructionBuff[p] != 0)
 	{
 		#if debug_runflow
-			Serial.print("Passo: ");
-			Serial.print(p);
-			Serial.print(" - ");
-			Serial.print("Tag: ");
+			Serial.print("Comando: ");
+			Serial.println(p);
 		#endif	
 		switch(instructionBuff[p])
 		{
@@ -383,7 +410,7 @@ bool runflow()
 				delay(5);	
 			break;
 			case Left:
-				angledSteps = 95.00;
+				angledSteps = 92.00;
 				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("L");
@@ -391,7 +418,7 @@ bool runflow()
 				delay(5);		
 			break;
 			case Right:
-				angledSteps = 95.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				angledSteps = 92.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
 				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("R");
@@ -423,7 +450,11 @@ bool runflow()
 		}	
 		if(callback)p++;
 		delay(2);
-	}	
+	}
+	#if debug_runflow
+			Serial.print("Quantos Blocos de Comando: ");
+			Serial.println(p);
+		#endif	
 	return callback;
 }
 bool readRfid()
