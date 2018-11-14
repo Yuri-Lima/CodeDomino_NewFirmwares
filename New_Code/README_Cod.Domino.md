@@ -14,6 +14,8 @@
 	https://youtu.be/TjC3F9sj-x0
 	https://www.youtube.com/watch?v=3iHUX_oOcX0
 	https://www.dobitaobyte.com.br/sirene-com-arduino/
+	https://www.youtube.com/watch?v=xXUKfTNHkKE&list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L&t=3s&index=8 --> Over in the Air com HC 05
+	https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth --> Over in the Air com HC 05
 	
 */
 //==================================================================================================================
@@ -103,4 +105,11 @@
 		criar um Triangulo Retangulo apenas especificando o tipo do triangulo notavel e a medida do cateto opostos, para obter as demais
 		medidas. 
 		Enfim, vi que temos muito coisa a fazer, tanto para uma versão open, como para uma versão comercial mais bem elaborada no sentido (precisão). 
+*/
+//==================================================================================================================
+//Over in the Air com HC 05
+/*
+	Toda a implementação seguiu as orientações dos links que coloquei a disposição, tem detalhes que é preciso estudar mais. 
+	Exemplo: tempo de permanencia no pareamento. 
+		Parear automaticamente, com uma lista predefinida de dispositivos. 
 */

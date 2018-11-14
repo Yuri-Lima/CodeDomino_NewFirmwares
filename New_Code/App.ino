@@ -40,11 +40,11 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 /*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
-#define debug_setup 0
+#define debug_setup 1
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
-#define debug_runflow 0
+#define debug_runflow 1
 #define debug_shapes 0
 #define debug_walk 0
 #define debug_alocarMatriz 0
@@ -138,7 +138,7 @@ void setup()
 	SPI.begin();
 	mfrc522.PCD_Init();
 	#if debug_setup
-	Serial.begin(9600);
+	Serial.begin(115200);
 	memcpy(buffer,"X0000000",(size-2)/2);//X para sinalizar inicio de comandos
 	Serial.write(char(buffer[0]));
 	Serial.println();
