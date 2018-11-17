@@ -13,6 +13,8 @@
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Ultrassonic",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\BlueDebug",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Rfid\\src",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\MPU6050_tockn\\src",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\PID",
                 "F:\\Arduino\\hardware\\tools\\avr\\avr\\include\\avr",
                 "E:\\Arduino\\hardware\\arduino\\avr\\**"
             ],

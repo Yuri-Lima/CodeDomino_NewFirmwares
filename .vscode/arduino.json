@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:uno",
-    "port": "COM8",
+    "port": "COM12",
     "sketch": "New_Code\\App.ino",
     "arduino.logLevel": "verbose"
 }

@@ -16,6 +16,7 @@
 	https://www.dobitaobyte.com.br/sirene-com-arduino/
 	https://www.youtube.com/watch?v=xXUKfTNHkKE&list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L&t=3s&index=8 --> Over in the Air com HC 05
 	https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth --> Over in the Air com HC 05
+	https://github.com/tockn/MPU6050_tockn --> MPU6050
 	
 */
 //==================================================================================================================
@@ -113,3 +114,4 @@
 	Exemplo: tempo de permanencia no pareamento. 
 		Parear automaticamente, com uma lista predefinida de dispositivos. 
 */
+

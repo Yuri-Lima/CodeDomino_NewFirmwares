@@ -16,6 +16,10 @@
 #include <MFRC522Extended.h>
 #include <require_cpp11.h>
 #include <Ultrassonic.h>
+#include <MPU6050_tockn.h>
+#include <Wire.h>
+#include <PID_v1.h>
+MPU6050 mpu6050(Wire);
 
 //Etapa 1 - Motor
 float GrausPassoDoMotor = 0.1757;
@@ -41,7 +45,8 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 /*Estás opções servem para diminuir o uso de memoria de armazenamento, habilitar apenas quando necessário, ou seja, para debug.
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
-#define debug_setup 1
+#define debug_begin 1
+#define debug_setup 0
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
@@ -95,7 +100,8 @@ const int timer_R = 500;  	 //Timer RFID
 const int timer_F = 1000;   //Timer  shapes Geometricas
 const int timer_S = 1500;  // Timer Ultrassonic
 const int timer_R_F = 800;//Recording Flash
-const int timer_Batery = 10000;//Recording Flash
+const int timer_Batery = 20000;//Recording Flash
+const int timer_PID = 50;
 //=========================================================================================
 //Função  walk
 const int latchPin = 8;  //Pin connected to ST_CP of 74HC595
@@ -131,24 +137,53 @@ uint8_t pageAddr = 0x06;
 //Função logicflow e runflow
 char instructionBuff[20];
 record _record(0);
+
 //Batery Level
 BatLevelCod BatLevelCod(0);
+
 //bluetooth_debug
-BlueDebug BlueDebug(0);
 char bufferDebug[20];
+BlueDebug BlueDebug(0);
+
+//Define Variables we'll be connecting to
+double Setpoint, Input, Output;
+
+//Specify the links and initial tuning parameters
+double Kp=0.5, Ki=0.08, Kd=0.05;//Leva tempos até vc achar os paramentos corretos.
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
 
 void setup()
 { 	
+	//===================================================================================================
+	//Etapas de calibração e inicialização do PID
+	//===================================================================================================
+	//Recomendado iniciar primeiro essas ações
+	Wire.begin();
+	mpu6050.begin();
+	mpu6050.calcGyroOffsets(true);//Calibração de angulo
+	nivela();
+	myPID.SetOutputLimits(-1, 1);//Range
+	myPID.SetSampleTime(200);
+	//turn the PID on
+	myPID.SetMode(AUTOMATIC);
+	buzzer2.sing(S_superHappy);
+	//===================================================================================================
+	//Fim das etapas
+	//===================================================================================================
 	SPI.begin();
 	mfrc522.PCD_Init();
-	#if debug_setup
+
+	#if debug_begin
 	Serial.begin(115200);
-	memcpy(buffer,"X0000000",(size-2)/2);//X para sinalizar inicio de comandos
-	Serial.write(char(buffer[0]));
+	#endif
+
+	#if debug_setup
 	Serial.println();
-	//===================================================================================================
-	Serial.print(F("Passos para a RODA rodar (r_360): "));  Serial.println(r_360);
-	Serial.print(F("Distancia pecorrida pela RODA (C): ")); Serial.println(C);
+	Serial.print(F("Passos para a RODA rodar (r_360): "));  
+	Serial.println(r_360);	
+	Serial.print(F("Distancia pecorrida pela RODA (C): ")); 
+	Serial.println(C);
 	Serial.print(F("Distancia pecorrida pelo CARRO no proprio EIXO (C_): "));    Serial.println(C_);
 	Serial.print(F("Quantas voltas a RODA tem que dar para o CARRO rodar no EIXO (revol_): "));   Serial.println(revol_);
 	Serial.print(F("Quantos passos para o CARRO rodar no EIXO (e_360): "));   Serial.println(e_360);
@@ -156,6 +191,7 @@ void setup()
 	Serial.print(BatLevelCod.readVcc(4));//Passe como parametro quantas amostras de leitura deseja.
 	Serial.println("mV");
 	#endif
+
 	if(BatLevelCod.readVcc(10) < 4600)
 	{
 		buzzer2.sing(S_disconnection);
@@ -168,7 +204,8 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	BlueDebug.print_string_int("O numero", trig);
+	//BlueDebug.print_int(trig);
+	//BlueDebug.print_string_int("O numero int", trig);
 	buzzer2.sing(S_connection);
 	//buzzer.soundHome();
 }
@@ -181,6 +218,17 @@ void loop()
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
 	flag_button = true, callback_end_sonic = false, callback_begin_runflow = false;
 	millisAtual = millis();
+	//===================================================================================================
+	//Verificação PID
+	//===================================================================================================
+	if (millisAtual % timer_PID == 0)
+	{
+		mpu6050.update();
+		Serial.println(mpu6050.getAngleZ());
+		
+	}
+	//===================================================================================================
+	//Faz a checagem do nivel da bateria a cada 20 segundos
 	//===================================================================================================
 	if (millisAtual % timer_Batery == 0)
 	{	
@@ -282,6 +330,18 @@ void loop()
 /*
 =====================================================================================================
 */
+void nivela()
+{
+	short int samples = 10;
+	//initialize the variables we're linked to
+	for(byte x = 0; x < samples; x++)
+	{
+		mpu6050.update();
+		Input += mpu6050.getAngleZ();
+		delay(10);
+	}
+	Setpoint = Input/samples;
+}
 bool logicflow(bool callback_read_rfid)
 {	
 	static short int  linha = 0, coluna = 0;
@@ -333,6 +393,7 @@ bool runflow()
 		{
 			case Front:
 				stepsAway = 11.00;
+				Setpoint = 0;
 				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1);
 				#if debug_runflow	
 					Serial.println("F");
@@ -341,6 +402,7 @@ bool runflow()
 			break;
 			case Left:
 				angledSteps = 90.00;
+				Setpoint = 90;
 				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("L");
@@ -349,6 +411,7 @@ bool runflow()
 			break;
 			case Right:
 				angledSteps = 90.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				Setpoint = -90;
 				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
 				#if debug_runflow
 					Serial.println("R");
@@ -544,6 +607,19 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 		}
 			//================================================================================
 			//Aqui temos como realizar uma curva ou circunfencia
+			mpu6050.update();
+			Input = mpu6050.getAngleZ();
+			myPID.Compute();
+			Serial.println(Input);
+			if(Output == 1)
+			{				
+				flag_Right = false;
+			}
+			else if(Output == -1)
+			{
+				flag_Left = false;
+			}
+
 			if(_freqRot > 0)
 			{
 				if(_CW_CCW == 1) 
@@ -551,10 +627,12 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 					#if debug_walk
 					Serial.println(stepstowalk % _freqRot);
 					#endif
+					Serial.println("_CW_CCW > 1");
 					(stepstowalk % _freqRot) != 1 ? flag_Left = false : flag_Left = true;
 				}
 				else if(_CW_CCW == -1)
 				{
+					Serial.println("_CW_CCW > -1");
 					(stepstowalk % _freqRot) != 1 ? flag_Right = false : flag_Right = true;
 				}
 			}
