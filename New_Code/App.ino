@@ -7,6 +7,7 @@
 #include <RecordFlash.h>
 #include <SoundCod2.h> //--> Lincena de uso https://creativecommons.org/licenses/by-sa/4.0/  --> https://github.com/OttoDIY/DIY
 #include <BatLevelCod.h>
+#include <BlueDebug.h>
 //=====================================================================================================
 //Include de libs convencionais
 #include <SPI.h>
@@ -132,6 +133,9 @@ char instructionBuff[20];
 record _record(0);
 //Batery Level
 BatLevelCod BatLevelCod(0);
+//bluetooth_debug
+BlueDebug BlueDebug(0);
+char bufferDebug[20];
 
 void setup()
 { 	
@@ -164,12 +168,14 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
+	BlueDebug.print_String_Int("O numero", trig);
 	buzzer2.sing(S_connection);
 	//buzzer.soundHome();
 }
 
 void loop()
 {
+	short int sizeDebug;
 	static short int option = 0, callback_end_walk = 0, option_runflow = 0;
 	static float dist = (r_360 * 3) / C, U_sonic = 0.00;// 3 cm
 	static bool callback_end_runflow = false, callback_read_rfid = false, callback_end_logicflow = true, 
@@ -179,13 +185,13 @@ void loop()
 	if (millisAtual % timer_Batery == 0)
 	{	
 		#if debug_loop_batery
-				Serial.print("Batery OK");
+			BlueDebug.print_string("Batery OK");
 		#endif
 		if(BatLevelCod.readVcc(10) < 4600)
 		{
 			buzzer2.sing(S_disconnection);
 			#if debug_loop_batery
-				Serial.print("Batery Low");
+				BlueDebug.print_string("Batery Low");
 			#endif
 			delay(4000);
 			buzzer2.sing(S_disconnection);
@@ -202,7 +208,7 @@ void loop()
 			#endif
 			if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
 			#if debug_loop
-				Serial.print("Option: ");Serial.println(option);
+				BlueDebug.print_string("Option: ");BlueDebug.print_int(option);
 			#endif
 			callback_begin_runflow = true;
 			delay(2);		
@@ -263,14 +269,15 @@ void loop()
 	{
 
 			#if debug_loop
-				Serial.print("Recording... ");//Serial.print(LQ0);Serial.print(" - ");
+				BlueDebug.print_string("Recording... ");
 			#endif
 			_record.Record(option, instructionBuff);
-			Serial.println(instructionBuff);
+			BlueDebug.print_string(instructionBuff);
 			option_runflow = option;
 			option = 0;
 			delay(2);		
 	}
+	//if (millisAtual % 50 == 0 )
 }
 /*
 =====================================================================================================

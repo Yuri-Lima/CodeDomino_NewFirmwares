@@ -7,6 +7,11 @@
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Bounce\\src",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Button",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\SoundCod",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\SoundCod2",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\BatLevelCod",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\RecordFlash",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Ultrassonic",
+                "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\BlueDebug",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Rfid\\src",
                 "F:\\Arduino\\hardware\\tools\\avr\\avr\\include\\avr",
                 "E:\\Arduino\\hardware\\arduino\\avr\\**"
