@@ -23,11 +23,11 @@ float m_erro_r = 1.05;
 float r_360 = (360 / GrausPassoDoMotor) + m_erro_r;
 
 //Etapa 2 - Roda 
-float raioRoda =  3.3;
+float raioRoda =  3.5;//3.3;
 float C = (2 * PI * raioRoda); //C"..
 
 //Etapa 3 - Carro
-float raioEixo = 4.1; 
+float raioEixo = 6.25;//4.1; 
 float C_ = (2 * PI * raioEixo); //C'
 
 //Etapa 4 - Revoluções 
@@ -45,7 +45,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
-#define debug_runflow 1
+#define debug_runflow 0
 #define debug_shapes 0
 #define debug_walk 0
 #define debug_alocarMatriz 0
@@ -141,6 +141,7 @@ void setup()
 { 	
 	SPI.begin();
 	mfrc522.PCD_Init();
+	//buzzer2.sing(S_superHappy);
 	#if debug_setup
 	Serial.begin(115200);
 	memcpy(buffer,"X0000000",(size-2)/2);//X para sinalizar inicio de comandos
@@ -168,7 +169,7 @@ void setup()
 	digitalWrite(latchPin, LOW);
 	shiftOut(dataPin, clockPin, MSBFIRST, B00000000); //envia resultado binÃ¡rio para o shift register
 	digitalWrite(latchPin, HIGH);
-	BlueDebug.print_string_int("O numero", trig);
+	//BlueDebug.print_string_int("O numero", trig);
 	buzzer2.sing(S_connection);
 	//buzzer.soundHome();
 }
@@ -222,7 +223,7 @@ void loop()
 		if(option == 1)
 		{
 			delay(5);
-			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
+			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1,7);//procurando a primeira peça 
 			
 			if(callback_end_walk == 2) option = 0;
 
@@ -250,8 +251,7 @@ void loop()
 		if ((option_runflow  > 1) && (option_runflow < 7) && callback_begin_runflow)
 		{ 	
 			delay(2000);
-			//shapes(option);
-			//if(option == 3) 
+			//callback_end_runflow = shapes(option_runflow);
 			callback_end_runflow = runflow();
 			if(callback_end_runflow)
 			{
@@ -333,7 +333,7 @@ bool runflow()
 		{
 			case Front:
 				stepsAway = 11.00;
-				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1);
+				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1,3);
 				#if debug_runflow	
 					Serial.println("F");
 				#endif
@@ -341,7 +341,7 @@ bool runflow()
 			break;
 			case Left:
 				angledSteps = 90.00;
-				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
+				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1,3);
 				#if debug_runflow
 					Serial.println("L");
 				#endif
@@ -349,7 +349,7 @@ bool runflow()
 			break;
 			case Right:
 				angledSteps = 90.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
-				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1,3);
 				#if debug_runflow
 					Serial.println("R");
 				#endif
@@ -357,7 +357,7 @@ bool runflow()
 			break;
 			case Back:
 				stepsAway = 11.00;
-				callback = walk(-1, -1,  int((r_360 * stepsAway) / C), 0, 1);
+				callback = walk(-1, -1,  int((r_360 * stepsAway) / C), 0, 1,3);
 				#if debug_runflow
 					Serial.println("B");	
 				#endif
@@ -365,7 +365,7 @@ bool runflow()
 			break;
 			case Angle:
 				angledSteps = 60;
-				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1,3);
 				#if debug_runflow
 					Serial.println("A");
 				#endif
@@ -413,7 +413,7 @@ bool  shapes(int edro)
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1,4);
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
@@ -427,18 +427,18 @@ bool  shapes(int edro)
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0,4);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
-		case 45: //Rotação angular no proprio eixo ////==> era 3
+		case 3: //Rotação angular no proprio eixo ////==> era 3
 			ang = 90; //escolha o angulo
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando regra de
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0); 
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0,4); 
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -457,7 +457,7 @@ bool  shapes(int edro)
 				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
 				#endif
-				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0);
+				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0,4);
 				delay(10);
 			}
 				desalocarMatriz(m,6);
@@ -474,7 +474,7 @@ bool  shapes(int edro)
 					#if debug_shapes
 					Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
 					#endif
-					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0);
+					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0,4);
 					delay(10);
 				}
 			}
@@ -482,13 +482,13 @@ bool  shapes(int edro)
 		break;
 		case 6: //Circulo
 			//razao = 3;
-			ang = 440; // 870 para razao de 6
+			ang = 880; // 870 para razao de 6
 			m = alocarMatriz(6,3);
 			m[0][0] = 1; m[0][1] = 1; m[0][2] = (e_360 * ang) / 360; //linha 1Âª comando
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1);
+			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1,4);
 			desalocarMatriz(m,1);
 		break;
 		/*
@@ -516,7 +516,7 @@ bool  shapes(int edro)
 	}
 	return callback;    
 }
-int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
+int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW, byte speed)
 { 	 
 	#if debug_walk
 	Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
@@ -533,15 +533,18 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 	if(_Left == 0) flag_Left = false;//Stop
 	while (stepstowalk > 0)
 	{
-		char LQ0 = optionPin.pressedtime();
-		if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
-		if(option == 1 || option == 7)
+		
+		if (millisAtual % speed == 0)
 		{
-			stepstowalk = 0; 
-			callback_end_walk = 2;
-			disable_coil();
-			return callback_end_walk;
-		}
+			char LQ0 = optionPin.pressedtime();
+			if(LQ0 == 'Q' || LQ0 == 'L') option = optionPin.readbutton(LQ0);
+			if(option == 1 || option == 7)
+			{
+				stepstowalk = 0; 
+				callback_end_walk = 2;
+				disable_coil();
+				return callback_end_walk;
+			}
 			//================================================================================
 			//Aqui temos como realizar uma curva ou circunfencia
 			if(_freqRot > 0)
@@ -602,6 +605,8 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			flag_Right= true;
 			delay(2);
 		//}	
+		}
+		millisAtual = millis();
 	}
 	//Desabilitar bobina para economia de energia
 	disable_coil();

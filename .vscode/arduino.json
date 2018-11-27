@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:uno",
-    "port": "COM12",
-    "sketch": "New_Code\\App.ino",
+    "port": "COM4",
+    "sketch": "Code_MPU_PID\\App_MPU6050_PID.ino",
     "arduino.logLevel": "verbose"
 }

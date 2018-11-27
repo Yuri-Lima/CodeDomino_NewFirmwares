@@ -3,7 +3,7 @@
         {
             "name": "Win32",
             "includePath": [
-                "E:\\Arduino\\tools\\**",
+                "C:\\Arduino\\tools\\**",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Bounce\\src",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Button",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\SoundCod",
@@ -15,11 +15,11 @@
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\Rfid\\src",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\MPU6050_tockn\\src",
                 "C:\\Users\\ymlim\\Documents\\Arduino\\libraries\\PID",
-                "F:\\Arduino\\hardware\\tools\\avr\\avr\\include\\avr",
-                "E:\\Arduino\\hardware\\arduino\\avr\\**"
+                "C:\\Arduino\\hardware\\tools\\avr\\avr\\include\\avr",
+                "C:\\Arduino\\hardware\\arduino\\avr\\**"
             ],
             "forcedInclude": [
-                "E:\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ],
             "intelliSenseMode": "msvc-x64",
             "compilerPath": "E:\\LLVM\\bin\\clang.exe",

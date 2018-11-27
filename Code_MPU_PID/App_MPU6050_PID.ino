@@ -46,11 +46,11 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 	O.B.S.:Caso venha a usar, habilite primeiro o debug_setup, para habilitrar o Serial.begin.
 */
 #define debug_begin 1
-#define debug_setup 0
+#define debug_setup 1
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
-#define debug_runflow 1
+#define debug_runflow 0
 #define debug_shapes 0
 #define debug_walk 0
 #define debug_alocarMatriz 0
@@ -224,7 +224,7 @@ void loop()
 	if (millisAtual % timer_PID == 0)
 	{
 		mpu6050.update();
-		Serial.println(mpu6050.getAngleZ());
+		//Serial.println(mpu6050.getAngleZ());
 		
 	}
 	//===================================================================================================
@@ -270,7 +270,7 @@ void loop()
 		if(option == 1)
 		{
 			delay(5);
-			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1);//procurando a primeira peça 
+			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1,0);//procurando a primeira peça 
 			
 			if(callback_end_walk == 2) option = 0;
 
@@ -299,7 +299,6 @@ void loop()
 		{ 	
 			delay(2000);
 			//shapes(option);
-			//if(option == 3) 
 			callback_end_runflow = runflow();
 			if(callback_end_runflow)
 			{
@@ -393,26 +392,37 @@ bool runflow()
 		{
 			case Front:
 				stepsAway = 11.00;
-				Setpoint = 0;
-				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1);
+				//nivela();
+				mpu6050.update();
+				Setpoint = mpu6050.getAngleZ();
+				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1,p);
 				#if debug_runflow	
 					Serial.println("F");
 				#endif
 				delay(5);	
 			break;
 			case Left:
-				angledSteps = 90.00;
-				Setpoint = 90;
-				callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1);
+				angledSteps = 1.00;
+				Setpoint = 90 + mpu6050.getAngleZ();
+				while(mpu6050.getAngleZ() <= Setpoint)
+				{
+					callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1,p);
+					mpu6050.update();
+					
+				}	
 				#if debug_runflow
 					Serial.println("L");
 				#endif
 				delay(5);		
 			break;
 			case Right:
-				angledSteps = 90.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
-				Setpoint = -90;
-				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				angledSteps = 3.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
+				Setpoint = -90 - mpu6050.getAngleZ();
+				while(mpu6050.getAngleZ() >= Setpoint)
+				{
+					callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1,p);
+					mpu6050.update();
+				}
 				#if debug_runflow
 					Serial.println("R");
 				#endif
@@ -420,7 +430,7 @@ bool runflow()
 			break;
 			case Back:
 				stepsAway = 11.00;
-				callback = walk(-1, -1,  int((r_360 * stepsAway) / C), 0, 1);
+				callback = walk(-1, -1,  int((r_360 * stepsAway) / C), 0, 1,p);
 				#if debug_runflow
 					Serial.println("B");	
 				#endif
@@ -428,7 +438,7 @@ bool runflow()
 			break;
 			case Angle:
 				angledSteps = 60;
-				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1);
+				callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1,p);
 				#if debug_runflow
 					Serial.println("A");
 				#endif
@@ -476,7 +486,7 @@ bool  shapes(int edro)
 			ang = e_360; //escolha o angulo	
 			m = alocarMatriz(1,3);
 			m[0][0] = 1; m[0][1] = -1; m[0][2] = ang; //linha 1Âª comando
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 1,0);
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
@@ -490,7 +500,7 @@ bool  shapes(int edro)
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0);
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0,0);
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -501,7 +511,7 @@ bool  shapes(int edro)
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0); 
+			callback =  walk(m[0][0], m[0][1],  m[0][2], 0, 0,0); 
 			delay(10);
 			desalocarMatriz(m,1);
 		break;
@@ -520,7 +530,7 @@ bool  shapes(int edro)
 				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
 				#endif
-				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0);
+				callback =  walk(m[i][0], m[i][1],  m[i][2], 0, 0,0);
 				delay(10);
 			}
 				desalocarMatriz(m,6);
@@ -537,7 +547,7 @@ bool  shapes(int edro)
 					#if debug_shapes
 					Serial.print(m[j][0]);Serial.print(" - ");Serial.print (m[j][1]);Serial.print(" - ");Serial.println(m[j][2]);
 					#endif
-					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0);
+					callback =  walk(m[j][0], m[j][1],  m[j][2], 0, 0,0);
 					delay(10);
 				}
 			}
@@ -551,7 +561,7 @@ bool  shapes(int edro)
 			#if debug_shapes
 			Serial.print(m[0][0]);Serial.print(" - ");Serial.print (m[0][1]);Serial.print(" - ");Serial.println(m[0][2]);
 			#endif
-			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1);
+			callback =  walk(m[0][0], m[0][1], m[0][2], 6, 1,0);
 			desalocarMatriz(m,1);
 		break;
 		/*
@@ -565,7 +575,7 @@ bool  shapes(int edro)
 				#if debug_shapes
 				Serial.print(m[i][0]);Serial.print(" - ");Serial.print (m[i][1]);Serial.print(" - ");Serial.println(m[i][2]);
 				#endif
-				walk(m[i][0], m[i][1],  m[i][2], 4, 0);
+				walk(m[i][0], m[i][1],  m[i][2], 4, 0,0);
 				delay(50);
 			}
 				desalocarMatriz(m,6);
@@ -579,7 +589,7 @@ bool  shapes(int edro)
 	}
 	return callback;    
 }
-int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
+int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW,byte p)
 { 	 
 	#if debug_walk
 	Serial.print(_Left);Serial.print(" - ");Serial.println(_Right);
@@ -610,15 +620,28 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW)
 			mpu6050.update();
 			Input = mpu6050.getAngleZ();
 			myPID.Compute();
-			Serial.println(Input);
-			if(Output == 1)
-			{				
-				flag_Right = false;
-			}
-			else if(Output == -1)
+			Serial.print("p: ");
+			Serial.println(p);
+			Serial.print("getAngleZ: ");
+			Serial.println(mpu6050.getAngleZ());
+			Serial.print("Setpoint: ");
+			Serial.println(Setpoint);
+			if(instructionBuff[p] != Front)
 			{
-				flag_Left = false;
+				int x =0;
+			}	
+			else
+			{
+				if(Output == 1)
+				{				
+					flag_Right = false;
+				}
+				else if(Output == -1)
+				{
+					flag_Left = false;
+				}
 			}
+				
 
 			if(_freqRot > 0)
 			{
