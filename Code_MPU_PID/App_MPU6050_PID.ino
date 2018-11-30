@@ -392,7 +392,7 @@ bool runflow()
 		switch(instructionBuff[p])
 		{
 			case Front:
-				stepsAway = 11.50;
+				stepsAway = 11.00;
 				if(instructionBuff[p-1] != Front) mpu6050.calcGyroOffsets(true);//Se a peça anterior com igual ele manter o Setpoint antigo.
 				mpu6050.update();
 				instructionBuff[p-1] == Front ? Setpoint : Setpoint = mpu6050.getAngleZ();//Se a peça anterior com igual ele manter o Setpoint antigo.
