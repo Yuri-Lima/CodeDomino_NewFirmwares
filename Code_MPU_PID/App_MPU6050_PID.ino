@@ -50,7 +50,7 @@ float e_360 = r_360 * (revol_ + m_erro_e);//passo para rotação do proprio eixo
 #define debug_loop 0
 #define debug_rfid 0
 #define debug_logicflow 0
-#define debug_runflow 0
+#define debug_runflow 1
 #define debug_shapes 0
 #define debug_walk 0
 #define debug_alocarMatriz 0
@@ -149,7 +149,7 @@ BlueDebug BlueDebug(0);
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-double Kp=0.5, Ki=0.08, Kd=0.05;//Leva tempos até vc achar os paramentos corretos.
+double Kp=0.5, Ki=0.08, Kd=0.12;//Leva tempos até vc achar os paramentos corretos.
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 
@@ -161,10 +161,10 @@ void setup()
 	//Recomendado iniciar primeiro essas ações
 	Wire.begin();
 	mpu6050.begin();
-	mpu6050.calcGyroOffsets(true);//Calibração de angulo
+	//mpu6050.calcGyroOffsets(true);//Calibração de angulo
 	nivela();
 	myPID.SetOutputLimits(-1, 1);//Range
-	myPID.SetSampleTime(200);
+	myPID.SetSampleTime(50);
 	//turn the PID on
 	myPID.SetMode(AUTOMATIC);
 	buzzer2.sing(S_superHappy);
@@ -270,6 +270,7 @@ void loop()
 		if(option == 1)
 		{
 			delay(5);
+			Setpoint = mpu6050.getAngleZ();
 			if(callback_end_logicflow) callback_end_walk = walk(1, 1, dist , 0, 1,0);//procurando a primeira peça 
 			
 			if(callback_end_walk == 2) option = 0;
@@ -380,7 +381,7 @@ bool logicflow(bool callback_read_rfid)
 bool runflow()
 {	
 	byte p = 0;
-	bool callback = false;
+	bool callback = false, flag = false;
 	float stepsAway, angledSteps;//stepsAway em centimetros -- angledSteps em graus
 	while(instructionBuff[p] != 0)
 	{
@@ -391,10 +392,10 @@ bool runflow()
 		switch(instructionBuff[p])
 		{
 			case Front:
-				stepsAway = 11.00;
-				//nivela();
+				stepsAway = 11.50;
+				if(instructionBuff[p-1] != Front) mpu6050.calcGyroOffsets(true);//Se a peça anterior com igual ele manter o Setpoint antigo.
 				mpu6050.update();
-				Setpoint = mpu6050.getAngleZ();
+				instructionBuff[p-1] == Front ? Setpoint : Setpoint = mpu6050.getAngleZ();//Se a peça anterior com igual ele manter o Setpoint antigo.
 				callback = walk(1, 1,  int((r_360 * stepsAway) / C), 0, 1,p);
 				#if debug_runflow	
 					Serial.println("F");
@@ -402,8 +403,9 @@ bool runflow()
 				delay(5);	
 			break;
 			case Left:
-				angledSteps = 1.00;
-				Setpoint = 90 + mpu6050.getAngleZ();
+				angledSteps = 2;
+				Setpoint = 90 + (Setpoint );
+				mpu6050.update();
 				while(mpu6050.getAngleZ() <= Setpoint)
 				{
 					callback = walk(-1, 1, int((e_360 * angledSteps) / 360.00), 0, 1,p);
@@ -416,8 +418,9 @@ bool runflow()
 				delay(5);		
 			break;
 			case Right:
-				angledSteps = 3.00;//96foi preciso realizar esse incremento, por enquanto motivo nao encontrado. 
-				Setpoint = -90 - mpu6050.getAngleZ();
+				angledSteps = 2;
+				Setpoint = - 90 + (Setpoint -5);
+				mpu6050.update();
 				while(mpu6050.getAngleZ() >= Setpoint)
 				{
 					callback = walk(1, -1,  int((e_360 * angledSteps) / 360.00), 0, 1,p);
@@ -620,17 +623,17 @@ int  walk(int _Right, int _Left, int stepstowalk, int _freqRot, int _CW_CCW,byte
 			mpu6050.update();
 			Input = mpu6050.getAngleZ();
 			myPID.Compute();
-			Serial.print("p: ");
-			Serial.println(p);
+			//Serial.print("p: ");
+			//Serial.println(p);
 			Serial.print("getAngleZ: ");
-			Serial.println(mpu6050.getAngleZ());
-			Serial.print("Setpoint: ");
-			Serial.println(Setpoint);
-			if(instructionBuff[p] != Front)
-			{
-				int x =0;
-			}	
-			else
+			Serial.print(mpu6050.getAngleZ());
+			Serial.print(" - ");
+			Serial.print(Setpoint);
+			Serial.println(" - Setpoint ");
+			
+			//Serial.print("instructionBuff: ");
+			//Serial.println(instructionBuff[p]);
+			if( _Left  == 1  && _Right == 1)
 			{
 				if(Output == 1)
 				{				
