@@ -77,6 +77,7 @@
 
 ![](Images)
 <img src="Images/Image.png" width="300" height="300">
+<img src="Images/Robo-decabot-fonte-do-autor.png">
 
 > ## Contact
 **Atention** If you go email me, please put as subject the name of the project, in this case: **(CodeDominor Remixer) Requests**
