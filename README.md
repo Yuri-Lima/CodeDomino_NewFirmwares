@@ -65,6 +65,7 @@
 
 > ### Software
 1. VsCode;
+1. Arduino IDE;
 
 > ### Protoypes Images
 ![](Images)
