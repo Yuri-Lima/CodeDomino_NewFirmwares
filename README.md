@@ -1,82 +1,86 @@
-# code_domino's Turrai Robot
-This is the firmware for the code_domino robot, called Turrai. Turrai is a 10 x 10 x 10 cm Arduino Uno compatible robot. 
-The objective of the project is to deliver a complete educational platform to teach kids between 4 and 99 years to program a robot using domino pieces (virtual or tangible). We are developing four different interaction models, based on the abstraction capabilities of the users in different ages. They are:
-* A basic pictographic domino for young toddlers who don't read, based on RFID. The pieces represent the moving capabilities of the robot;
-* A basic android application where toddlers can draw paths, translate in virtual domino pieces, and upload to the robot.
-* An advanced domino for kids, based on RFID, encompassing not only the movement pieces but complex program commands, as conditionals, functions, variables and parameters.
-* An advanced android application, who replicates the tangible advanced domino and can be uploaded to the robot via Bluetooth. The app also permits to backup codes, share, and consult other codes. 
+<!-- Headings --> <!-- Strong --> <!-- Italics --> <!-- Blockquote --> <!-- Links --> <!-- UL --> <!-- OL --> <!-- Images --> <!-- Code Blocks --> <!-- Tables --> 
+<!-- Task Lists -->
 
-The robot is composed of: 
-* Lasercut body in acrylic or MDF 2,5mm;
-* 2 5V step motor 28byj48 with ULN2003 board driver;
-* Hub shield with 74HC595 Shift Register for the motors;
-* Ultrassonic sensor connector in shield;
-* Gyroscope MPU-6050 GY-521 connector in shield;
-* 6 operation buttons;
-* Buzzer;
-* Servo motor controlling pen;
-* RFID RC-522 sensor connector in shield;
-* Bluetooth HC-05 or HC-06 connector in shield;
-* Extension bus for other modules (line follower, etc.).
-Instructions to build your own Turrai Robot will be found in www.codedomino.org, and in this github project.
+> # Decabot New Version from Firmware
 
-## Getting Started
+### First of all, this project is a remix from the [original project](https://github.com/Yuri-Lima/firmware_robot), where i just built new firmware and included some hardware to try cooperate with it.
 
-These instructions will get you a copy of the firmware up and running on your Turrai Robot.
+> ## The biography studied:
 
-### Prerequisites
+#### 3D Wheel
+* https://www.thingiverse.com/thing:862438/files
 
-You need the Arduino IDE to upload this firmware to your Arduino based Turrai robot. Also you will need the following libraries:
-* SPI version 1.1.1
-* MFRC522 version 1.3.6
-* Ultrasonic version 2.1.0
-* EEPROM version 2.0.0
-* Servo version 1.1.1
+#### Productivity metrics and automatic time tracking for programmers
+* https://wakatime.com/projects 
 
-Off course you need a Turrai complete robot. See www.codedomino.org and www.genioazul.com.br to build or buy your robot.
+#### Engine reduction mechanism
+* https://youtu.be/B86nqDRskVU
 
-### Installing
+#### Batery Level
+* https://www.automalabs.com.br/como-medir-a-tensao-de-alimentacao-do-arduino/
 
-To install, simply use this files inside arduino sketch folder. Don't forget to install the libraries, using arduino's IDE menu Sketch -> Install Library -> Manage Library.
+#### RFID record and write
+* https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/
 
-## Running the basic test
+#### Dynamic allocation memory
+* https://youtu.be/g2Tco_v73Pc
 
-To run the basic code (hello world), simply upload the code to the robot using USB, and press the button A (seccond from riht to left looking the robot frontal). The Turrai robot will draw a 10 x 10 cm suqare, then will position inside of it.
+#### Incremental encoder - animation
+* https://youtu.be/zzHcsJDV3_o
 
-### Break down into end to end tests
+### Right Angle Triangle Theorem SOH CAH TOA  
+* https://youtu.be/TjC3F9sj-x0 
+* https://www.youtube.com/watch?v=3iHUX_oOcX0 
+* https://www.dobitaobyte.com.br/sirene-com-arduino/ 
 
-To program a new code with the RFID dominoes, simply give a long press in any button: The robot start move looking forward the code, and will record it in the selected space memory. To execute, short press the same button. An exemple of code to try is listed above:
+### Over in the Air com HC 05 
+* https://youtu.be/xXUKfTNHkKE?list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L
+* https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth
 
-```
-Start - Repeat < 4 - front - left - Stop repeat - Stop
-```
-This code will draw a 10 x 10 cm square.
+### MPU6050
+* https://github.com/tockn/MPU6050_tockn
 
-## Built With
+> ## What was the changes
 
-* [Arduino IDE](http://www.arduino.cc) - The web framework used
+1. The main code;
+1. External reset button when something went wrong, like a bug;
+1. [MPU 6050](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/blob/master/Code_MPU_PID/App_MPU6050_PID.ino)
+1. Examples code to simulate individual part of the code:
+  - [Gravador_Tag, Passo_Caminhar, Read_Write, StringToInt, eeprom_get, eeprom_put, memset](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/Simula%C3%A7%C3%B5es)
+1. Libraries Created
+  * [SoundCod.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/SoundCod)
+  * [ButtonCod.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/Button)
+  * [RecordFlash.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/RecordFlash)
+  * [SoundCod2.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/SoundCod2)
+      * License from: https://creativecommons.org/licenses/by-sa/4.0/  
+      * Part of the code from: https://github.com/OttoDIY/DIY
+  * [BatLevelCod.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/BatLevelCod)
+  * [BlueDebug.h](https://bitbucket.org/apiice/firmware_robot/commits/d7aabaa0ca106b523513a8d5e12650b8c50fb360)
 
-## Contributing
+> ### Hardware
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+1. The main board from the original project;
+1. Bluetooth HC 05 plus General Components;
+1. MPU6050;
 
-## Versioning
+> ### Software
+1. VsCode;
 
-We use [SemVer](http://semver.org/) for versioning. 
+> ### Protoypes Images
+![](Images)
+<img src="Images/5.jpg" width="600" height="450">
+<img src="Images/9.jpg" width="600" height="450">
+<img src="Images/1.jpg" width="600" height="450">
+<img src="Images/2.jpg" width="600" height="450">
+<img src="Images/3.jpg" width="600" height="450">
+<img src="Images/4.jpg" width="600" height="450">
+<img src="Images/7.jpg" width="900" height="450">
+<img src="Images/8.jpg" width="900" height="450">
 
-## Authors
+> ### Contact
 
-* **Daniel Chagas** - *Initial work* - [PurpleBooth](https://github.com/triwaca)
-* ** Patrick Martins** - RFID reading
-* ** Lucas de Lima** - Hardware and Hub Shield
+> **Atention** If you go email me, please put as subject the name of the project, in this case: **(CodeDominor Remixer) Requests**
 
-See also the list of [contributors](https://github.com/CodeDomino/contributors) who participated in this project.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
-## Acknowledgments
-
-* This project received funds from Funcap - Fundação Cearense de Apoio ao Desenvolvimento Científico e Tecnológico - Edital Inovafir II 2017.
-* This projetc received support from Fundação Edson Queiroz  - Diretoria de Pesquisa, Desenvolvimento e Inovação - Universidade de Fortaleza.
+|  Name |  Email | Mobile  |
+|-------|--------|---------|
+|  Yuri Lima | y.m.lima19@gmail.com  | +353 83 419.1605  |   
