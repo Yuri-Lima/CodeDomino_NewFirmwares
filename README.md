@@ -75,7 +75,7 @@
 * [Great results with MPU6050](https://youtu.be/3xucGsFeTs0)
 
 ![](Images)
-<img src="Images/Image.png" width="600" height="450">
+<img src="Images/Image.png" width="300" height="300">
 
 > ### Contact
 
