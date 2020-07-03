@@ -78,8 +78,7 @@
 <img src="Images/Image.png" width="300" height="300">
 
 > ### Contact
-
-> **Atention** If you go email me, please put as subject the name of the project, in this case: **(CodeDominor Remixer) Requests**
+**Atention** If you go email me, please put as subject the name of the project, in this case: **(CodeDominor Remixer) Requests**
 
 |  Name |  Email | Mobile  |
 |-------|--------|---------|
