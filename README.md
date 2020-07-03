@@ -45,6 +45,7 @@
 1. The main code;
 1. External reset button when something went wrong, like a bug;
 1. [MPU 6050](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/blob/master/Code_MPU_PID/App_MPU6050_PID.ino)
+1. [Posicion Corret MPU6050](https://youtu.be/N3V8oYgs7Ro)
 1. Examples code to simulate individual part of the code:
   - [Gravador_Tag, Passo_Caminhar, Read_Write, StringToInt, eeprom_get, eeprom_put, memset](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/Simula%C3%A7%C3%B5es)
 1. Libraries Created
@@ -57,26 +58,24 @@
   * [BatLevelCod.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/BatLevelCod)
   * [BlueDebug.h](https://bitbucket.org/apiice/firmware_robot/commits/d7aabaa0ca106b523513a8d5e12650b8c50fb360)
 
-> ### Hardware
+> ## Hardware
 
 1. The main board from the original project;
 1. Bluetooth HC 05 plus General Components;
 1. MPU6050;
 
-> ### Software
+> ## Software
 1. VsCode;
 1. Arduino IDE;
 
-> ### Protoypes Images
+> ## Protoypes Images and Videos
+* [Posicion Corret MPU6050](https://youtu.be/N3V8oYgs7Ro)
+* [Simples Tests](https://youtu.be/KEpbW0obaI0)
+* [First tests using the MPU6050 into the project CodeDomino](https://youtu.be/_bp6ZzDUpjY)
+* [Great results with MPU6050](https://youtu.be/3xucGsFeTs0)
+
 ![](Images)
-<img src="Images/5.jpg" width="600" height="450">
-<img src="Images/9.jpg" width="600" height="450">
-<img src="Images/1.jpg" width="600" height="450">
-<img src="Images/2.jpg" width="600" height="450">
-<img src="Images/3.jpg" width="600" height="450">
-<img src="Images/4.jpg" width="600" height="450">
-<img src="Images/7.jpg" width="900" height="450">
-<img src="Images/8.jpg" width="900" height="450">
+<img src="Images/Image.jpg" width="600" height="450">
 
 > ### Contact
 
