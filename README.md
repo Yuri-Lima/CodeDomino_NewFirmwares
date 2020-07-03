@@ -5,6 +5,7 @@
 
 ### First of all, this project is a remix from the [original project](https://github.com/Yuri-Lima/firmware_robot), where i just built new firmware and included some hardware to try cooperate with it.
 
+
 > ## The biography studied:
 
 #### 3D Wheel
@@ -28,16 +29,16 @@
 #### Incremental encoder - animation
 * https://youtu.be/zzHcsJDV3_o
 
-### Right Angle Triangle Theorem SOH CAH TOA  
+#### Right Angle Triangle Theorem SOH CAH TOA  
 * https://youtu.be/TjC3F9sj-x0 
 * https://www.youtube.com/watch?v=3iHUX_oOcX0 
 * https://www.dobitaobyte.com.br/sirene-com-arduino/ 
 
-### Over in the Air com HC 05 
+#### Over in the Air com HC 05 
 * https://youtu.be/xXUKfTNHkKE?list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L
 * https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth
 
-### MPU6050
+#### MPU6050
 * https://github.com/tockn/MPU6050_tockn
 
 > ## What was the changes
@@ -77,7 +78,7 @@
 ![](Images)
 <img src="Images/Image.png" width="300" height="300">
 
-> ### Contact
+> ## Contact
 **Atention** If you go email me, please put as subject the name of the project, in this case: **(CodeDominor Remixer) Requests**
 
 |  Name |  Email | Mobile  |
