@@ -61,10 +61,45 @@
 
 > ## Analysis of the power consumption
  
-*CodeDomino Acording of the test made at **25/10/2018 at 23:07**. The power consumption was around ~95mA when it is stopped **waiting to receve the first command**, however, when the first command comes up, The power **minimun consumption** when it was working at around 495mA e **max was 700mA** at the end of the way. There is a pico of energy, when the bobine of the motors turns off. The **Lipo Batery 2S de 1300mAh** has a range aprox in 4 hours of work. 
+CodeDomino Acording of the test made at **25/10/2018 at 23:07**. The power consumption was around ~95mA when it is stopped **waiting to receve the first command**, however, when the first command comes up, The power **minimun consumption** when it was working at around 495mA e **max was 700mA** at the end of the way. There is a pico of energy, when the bobine of the motors turns off. The **Lipo Batery 2S de 1300mAh** has a range aprox in 4 hours of work. 
 O.B.S.: It's still necessary wacht his behavior, because all of the informatios is just piece of ideia, however, i considerated all experience that i had  at the long way doing the tests. 
 - **Calculate Base when it is stopped**: Lipo 1000mAh--> 1 / 0,095 = 10.526 * 60min = 631 minutes ou 10 horas stopped. 
-- **Calculate Base when it is works**: Lipo 1000mAh--> 1 / 0,5 = 2 * 60min = 120 minutes ou 2 hours. /
+- **Calculate Base when it is works**: Lipo 1000mAh--> 1 / 0,5 = 2 * 60min = 120 minutes ou 2 hours.
+
+> ## Calculates to show how the robot moves
+
+* --> May you can ask <-- 
+- How many steps are to turn the wheel self around into 360º? --> Etapa 2 
+- How many steps are to turn the robot self around into 360º??  --> Etapa 4
+```
+Etapa 1 - Motor
+1º Modelo do motor de passo, para saber quantos graus por passo. 
+2º Vamos dividir 360° por graus para obter quantos passos são necessários para 360°.
+O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações.
+_____________________________________________________________________________________________
+| http://robocraft.ru/files/datasheet/28BYJ-48.pdf 
+| Exemplos: (FullStep = 11,25° / 64 => 0.1757°) Motor de Passo 28BYJ-48                        |
+| Exemplos: 1Step = 5.625 --> FullStep = 2 * 5.625° => 11,25° ---> 360 / 0.1757° ---> p' = 2000 Passos |
+---------------------------------------------------------------------------------------------
+Etapa 2 - Roda                                  
+1º Precisamos das informações do diametro da RODA para obter o RAIO.
+2º Na formula C"=2*PI*r vamos obter a distancia percorrida em 360°.
+
+Etapa 3 - Carro
+1º Precisamos das informações do diametro entre as duas rodas, para obter o RAIO.
+2º Na formula C'=2*PI*r vamos obter a distancia percorrida em 360°, ou seja, no seu proprio eixo.
+
+Etapa 4 - Revoluções                   
+1º voltas = C" / C' Quantas voltas a roda do carro terá que fazer para que o carro realizar 360° em seu proprio eixo.
+
+Etapa 5 - Passos 
+1º P" = p' * voltas Em P" vamos obter a quantidade de passos para 360°
+
+O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações. Recomendado >= 0.01
+
+Detalhes importantes, tudo que for relacionado a movimentos de curva usamos e_360 e em linha reta r_360.
+
+```
 
 > ## Hardware
 
