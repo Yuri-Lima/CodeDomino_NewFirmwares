@@ -5,6 +5,18 @@
 
 ### For you knowledge, this project is a remix from the [original project](https://github.com/Yuri-Lima/firmware_robot). I had just built a new firmware and included some hardware to cooperate with it.
 
+> ## Basic Notice
+
+* Walk / 0 -> Stopped function, 1 -> forward, -1 -> back 
+  * This function controls all the execution of steps, in any direction, even curves. 
+  
+* As the basic guidelines are no longer a mystery. 
+  * I will try to explain a little about how I tried to solve the curve problem, as follows: 
+    * I noticed that one of the wheels needs to take fewer steps than the other, of course according to the direction, so I found a reason given by the parameter _freqRot, he is responsible, for inhibiting certain steps with a ratio between the steps to walk and the rest comparable to 1, in this rhythm, when varying this division, we can get drives that vary from 1 step each 2, such as 1 step every 5 and so on, so, the larger _freqRot, the longer the activation time for 1 step and the circumference / curve radius decreases, that is, it is inversely proportional. 
+    * All calculations for making circular movements, that is, curves, must be used as a variable parameter, e_360, because it is there that we have the steps, taking into account the axis of the car and all to follow in a straight line, either backwards or forwards, has as parameter / variable r_360. 
+    * Other calculations are just simple rules 3. In the function Shapes case 4, Sine and Tagente were used, because to perform it is necessary to create a Rectangle Triangle just specifying the type of the notable triangle and the opposite side measurement, to obtain the other measures . 
+    * Anyway, I saw that we have a lot to do, both for an open version, as for a commercial version better elaborated in the sense (precision). 
+    * Over in the Air with HC 05 / The entire implementation followed the guidelines of the links I made available, there are details that need to be studied further. Example: time spent in pairing. Pair automatically with a predefined list of devices.
 
 > ## The biography studied:
 
@@ -69,35 +81,40 @@ O.B.S.: It's still necessary wacht his behavior, because all of the informatios 
 > ## Calculates to show how the robot moves
 
 * --> May you can ask <-- 
-- How many steps are to turn the wheel self around into 360º? --> Etapa 2 
-- How many steps are to turn the robot self around into 360º??  --> Etapa 4
+- How many steps are to turn **the wheel** self around into 360º? --> go to **step number 2 **
+- How many steps are to turn **the robot** self around into 360º??  --> go to **step number 4**
 ```
-Etapa 1 - Motor
-1º Modelo do motor de passo, para saber quantos graus por passo. 
-2º Vamos dividir 360° por graus para obter quantos passos são necessários para 360°.
-O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações.
-_____________________________________________________________________________________________
-| http://robocraft.ru/files/datasheet/28BYJ-48.pdf 
-| Exemplos: (FullStep = 11,25° / 64 => 0.1757°) Motor de Passo 28BYJ-48                        |
-| Exemplos: 1Step = 5.625 --> FullStep = 2 * 5.625° => 11,25° ---> 360 / 0.1757° ---> p' = 2000 Passos |
----------------------------------------------------------------------------------------------
-Etapa 2 - Roda                                  
-1º Precisamos das informações do diametro da RODA para obter o RAIO.
-2º Na formula C"=2*PI*r vamos obter a distancia percorrida em 360°.
+Step 1 - Motor
+1º We need to know, which will be the model of the step motor to know how many degrees per step. 
+2º We are going to divide 360° by degrees steps of the type of motor to get how many steps are necessary to turn the wheel self around into 360°.
+O.B.S.: It is important to add one variable to incrise(+) a margin of error, because there are few oscillations.
 
-Etapa 3 - Carro
-1º Precisamos das informações do diametro entre as duas rodas, para obter o RAIO.
-2º Na formula C'=2*PI*r vamos obter a distancia percorrida em 360°, ou seja, no seu proprio eixo.
+```
+- http://robocraft.ru/files/datasheet/28BYJ-48.pdf 
 
-Etapa 4 - Revoluções                   
-1º voltas = C" / C' Quantas voltas a roda do carro terá que fazer para que o carro realizar 360° em seu proprio eixo.
+| Exemples|Type of motor|Stpes|
+|---------|-------------|-----|
+| FullStep = 11,25° / 64 => 0.1757°|28BYJ-48|0.1757°|
+| 1Step = 5.625 --> FullStep = 2 * 5.625° => 11,25° ---> 360 / 0.1757°|28BYJ-48|p' = 2000 steps|
 
-Etapa 5 - Passos 
-1º P" = p' * voltas Em P" vamos obter a quantidade de passos para 360°
+```
+Step 2 - The Wheel                                  
+1º We need the information of the diameter of the wheel to get radius.
+2º At the formula C" = 2 * PI * r --> we can get the log distance at 360°.
 
-O.B.S.: É importante adicionar uma variavel para incrementar(+) uma Margem de Erro, pois temos possiveis oscilações. Recomendado >= 0.01
+Step 3 - The Car
+1º We need to get the diameter between of the two wheel, to get radius.
+2º t the formula C' = 2 * PI * r --> we can get the log distance at 360°, however, on its own axis.
 
-Detalhes importantes, tudo que for relacionado a movimentos de curva usamos e_360 e em linha reta r_360.
+Step 4 - Revolution                   
+1º revolution = C" / C' --> How many stpes the wheel of the car, will have to do to the car turns 360° on its own axis.
+
+Step 5 - Steps 
+1º P" = p' * revolution --> At P" We can get how many steps to turn 360°.
+
+O.B.S.: It is important to add one variable to incrise(+) a margin of error, because there are few oscillations. Recomended >= 0.01
+
+Important details, everything that go to relate about moviment of the curve, we use the variable called e_360 and straight movement r_360.
 
 ```
 
