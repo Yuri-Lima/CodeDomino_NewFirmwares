@@ -129,7 +129,7 @@ Important details, everything that go to relate about moviment of the curve, we 
 * https://github.com/tockn/MPU6050_tockn
 
 > ## Protoypes Images and Videos
-##### On Youtube Channel
+##### Click on the text below to watch on Youtube Channel
 * [Posicion Corret MPU6050](https://youtu.be/N3V8oYgs7Ro)
 * [Simples Tests](https://youtu.be/KEpbW0obaI0)
 * [First tests using the MPU6050 into the project CodeDomino](https://youtu.be/_bp6ZzDUpjY)
