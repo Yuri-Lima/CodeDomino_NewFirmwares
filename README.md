@@ -18,41 +18,6 @@
     * Anyway, I saw that we have a lot to do, both for an open version, as for a commercial version better elaborated in the sense (precision). 
     * Over in the Air with HC 05 / The entire implementation followed the guidelines of the links I made available, there are details that need to be studied further. Example: time spent in pairing. Pair automatically with a predefined list of devices.
 
-> ## The biography studied:
-
-#### 3D Wheel
-* https://www.thingiverse.com/thing:862438/files
-
-#### Productivity metrics and automatic time tracking for programmers
-* https://wakatime.com/projects 
-
-#### Engine reduction mechanism
-* https://youtu.be/B86nqDRskVU
-
-#### Batery Level
-* https://www.automalabs.com.br/como-medir-a-tensao-de-alimentacao-do-arduino/
-
-#### RFID record and write
-* https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/
-
-#### Dynamic allocation memory
-* https://youtu.be/g2Tco_v73Pc
-
-#### Incremental encoder - animation
-* https://youtu.be/zzHcsJDV3_o
-
-#### Right Angle Triangle Theorem SOH CAH TOA  
-* https://youtu.be/TjC3F9sj-x0 
-* https://www.youtube.com/watch?v=3iHUX_oOcX0 
-* https://www.dobitaobyte.com.br/sirene-com-arduino/ 
-
-#### Over in the Air com HC 05 
-* https://youtu.be/xXUKfTNHkKE?list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L
-* https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth
-
-#### MPU6050
-* https://github.com/tockn/MPU6050_tockn
-
 > ## What was the changes
 
 1. The main code;
@@ -127,6 +92,41 @@ Important details, everything that go to relate about moviment of the curve, we 
 > ## Software
 1. VsCode;
 1. Arduino IDE;
+
+> ## The biography studied:
+
+#### 3D Wheel
+* https://www.thingiverse.com/thing:862438/files
+
+#### Productivity metrics and automatic time tracking for programmers
+* https://wakatime.com/projects 
+
+#### Engine reduction mechanism
+* https://youtu.be/B86nqDRskVU
+
+#### Batery Level
+* https://www.automalabs.com.br/como-medir-a-tensao-de-alimentacao-do-arduino/
+
+#### RFID record and write
+* https://www.filipeflop.com/blog/como-gravar-dados-no-cartao-rfid/
+
+#### Dynamic allocation memory
+* https://youtu.be/g2Tco_v73Pc
+
+#### Incremental encoder - animation
+* https://youtu.be/zzHcsJDV3_o
+
+#### Right Angle Triangle Theorem SOH CAH TOA  
+* https://youtu.be/TjC3F9sj-x0 
+* https://www.youtube.com/watch?v=3iHUX_oOcX0 
+* https://www.dobitaobyte.com.br/sirene-com-arduino/ 
+
+#### Over in the Air com HC 05 
+* https://youtu.be/xXUKfTNHkKE?list=PL4vok-JSscqD_f4F9JEucI_fXp49GaD4L
+* https://sites.google.com/site/wayneholder/inexpensively-program-your-arduino-via-bluetooth
+
+#### MPU6050
+* https://github.com/tockn/MPU6050_tockn
 
 > ## Protoypes Images and Videos
 * [Posicion Corret MPU6050](https://youtu.be/N3V8oYgs7Ro)
