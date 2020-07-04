@@ -3,7 +3,7 @@
 
 > # Decabot New Version from Firmware
 
-### First of all, this project is a remix from the [original project](https://github.com/Yuri-Lima/firmware_robot), where i just built new firmware and included some hardware to try cooperate with it.
+### For you knowledge, this project is a remix from the [original project](https://github.com/Yuri-Lima/firmware_robot). I had just built a new firmware and included some hardware to cooperate with it.
 
 
 > ## The biography studied:
@@ -58,6 +58,13 @@
       * Part of the code from: https://github.com/OttoDIY/DIY
   * [BatLevelCod.h](https://github.com/Yuri-Lima/CodeDomino_NewFirmwares/tree/master/libraries/BatLevelCod)
   * [BlueDebug.h](https://bitbucket.org/apiice/firmware_robot/commits/d7aabaa0ca106b523513a8d5e12650b8c50fb360)
+
+> ## Analysis of the power consumption
+ 
+*CodeDomino Acording of the test made at **25/10/2018 at 23:07**. The power consumption was around ~95mA when it is stopped **waiting to receve the first command**, however, when the first command comes up, The power **minimun consumption** when it was working at around 495mA e **max was 700mA** at the end of the way. There is a pico of energy, when the bobine of the motors turns off. The **Lipo Batery 2S de 1300mAh** has a range aprox in 4 hours of work. 
+O.B.S.: It's still necessary wacht his behavior, because all of the informatios is just piece of ideia, however, i considerated all experience that i had  at the long way doing the tests. 
+**Calculate Base when it is stopped**: Lipo 1000mAh--> 1 / 0,095 = 10.526 * 60min = 631 minutes ou 10 horas stopped. 
+**Calculate Base when it is works**: Lipo 1000mAh--> 1 / 0,5 = 2 * 60min = 120 minutes ou 2 hours. /
 
 > ## Hardware
 
