@@ -87,11 +87,12 @@ Important details, everything that go to relate about moviment of the curve, we 
 
 1. The main board from the original project;
 1. Bluetooth HC 05 plus General Components;
-1. MPU6050;
+1. MPU6050.
 
 > ## Software
 1. VsCode;
 1. Arduino IDE;
+1. SolidWorks.
 
 > ## The biography studied:
 
